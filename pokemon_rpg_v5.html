@@ -1,0 +1,544 @@
+<!DOCTYPE html><html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>寶可夢 RPG v2</title>
+<style>
+body{margin:auto;font:15px system-ui,sans-serif;background:#1b1f2a;color:#eee;padding:calc(10px + env(safe-area-inset-top,0px)) 10px calc(10px + env(safe-area-inset-bottom,0px));max-width:560px}
+button{background:#3a4560;color:#fff;border:0;border-radius:8px;padding:10px 12px;margin:3px;font-size:15px}
+button:active{background:#5a6ca0}button:disabled{opacity:.4}
+.card{background:#262c3b;border-radius:10px;padding:8px;margin:6px 0}
+.bar{height:8px;background:#444;border-radius:4px;overflow:hidden}.bar i{display:block;height:100%}
+.row{display:flex;gap:8px;align-items:center}
+img{background:#10131a;border-radius:8px;object-fit:contain}
+.log{font-size:13px;background:#10131a;padding:6px;border-radius:8px}
+select,input[type=text]{background:#10131a;color:#eee;border:1px solid #444;border-radius:6px;padding:6px;font-size:15px;max-width:45%}
+.hb{position:relative;margin:2px 0}.hb i{position:absolute;left:0;top:0}
+.hb i.f{transition:width .4s ease-out,background .4s}.hb i.g{background:#fff;opacity:.8;transition:width .8s ease-out .45s}
+.hb.lw{animation:lw 1s infinite}@keyframes lw{50%{box-shadow:0 0 6px 1px #f44}}
+.dn{position:absolute;left:0;width:100%;text-align:center;top:8px;font-size:22px;font-weight:900;pointer-events:none;text-shadow:0 0 3px #000,0 0 6px #000;animation:dnf 1.1s ease-out forwards;z-index:3}
+.dm{color:#ff6060}.dh{color:#60ff90}
+@keyframes dnf{0%{opacity:0;transform:translateY(8px) scale(.6)}20%{opacity:1;transform:translateY(0) scale(1.25)}100%{opacity:0;transform:translateY(-34px) scale(1)}}
+.ps-brn{filter:drop-shadow(0 0 5px #f80)}.ps-frz{filter:hue-rotate(150deg) brightness(1.25) saturate(.7) drop-shadow(0 0 6px #7df)}.ps-par{filter:drop-shadow(0 0 5px #fe3)}.ps-psn{filter:drop-shadow(0 0 5px #b4f) saturate(1.2)}.ps-slp{opacity:.65}
+.ps-cf{animation:wb .8s infinite}@keyframes wb{0%,100%{transform:rotate(-6deg)}50%{transform:rotate(6deg)}}
+.hurt{animation:sk .45s}.crit{animation:sk2 .7s}.healed{animation:hl .8s}
+@keyframes sk{0%{transform:translateX(0);filter:brightness(2.2) sepia(1) hue-rotate(-50deg) saturate(8)}15%{transform:translateX(-8px)}35%{transform:translateX(7px);filter:none}55%{transform:translateX(-4px)}75%{transform:translateX(3px)}100%{transform:translateX(0)}}
+@keyframes sk2{0%{transform:translateX(0) scale(1);filter:brightness(3) sepia(1) hue-rotate(-50deg) saturate(10)}10%{transform:translateX(-12px) scale(1.12)}25%{transform:translateX(11px) scale(1.12);filter:brightness(1.6) sepia(1) hue-rotate(-50deg) saturate(6)}45%{transform:translateX(-8px);filter:none}65%{transform:translateX(5px)}100%{transform:translateX(0) scale(1)}}
+@keyframes hl{0%{filter:none}30%{filter:brightness(1.7) saturate(1.8) hue-rotate(70deg) drop-shadow(0 0 10px #5f8)}100%{filter:none}}
+.sf-brn{--c:#f80}.sf-frz{--c:#7df}.sf-par{--c:#fe3}.sf-psn{--c:#b4f}.sf-slp{--c:#99a}.sf-cf{--c:#f6f}
+.card[class*=sf-]{animation:cg .9s}@keyframes cg{0%{box-shadow:0 0 0 0 var(--c)}30%{box-shadow:0 0 16px 5px var(--c)}100%{box-shadow:0 0 0 0 transparent}}
+</style></head><body><div id=app></div><script>
+const TY="一般 火 水 草 電 冰 格鬥 毒 地面 飛行 超能 蟲 岩石 幽靈 龍 惡 鋼 妖精".split(" ");
+const TC=["#a8a878","#f08030","#6890f0","#78c850","#f8d030","#98d8d8","#c03028","#a040a0","#e0c068","#a890f0","#f85888","#a8b820","#b8a038","#705898","#7038f8","#705848","#b8b8d0","#ee99ac"];
+// 屬性相剋：攻擊屬性 -> 效果絕佳|效果不好|無效
+const CH=["|12,16|13","3,5,11,16|1,2,12,14|","1,8,12|2,3,14|","2,8,12|1,3,7,9,11,14,16|","2,9|3,4,14|8","3,8,9,14|1,2,5,16|","0,5,12,15,16|7,9,10,11,17|13","3,17|7,8,12,13|16","1,4,7,12,16|3,11|9","3,6,11|4,12,16|","6,7|10,16|15","3,10,15|1,6,7,9,13,16,17|","1,5,9,11|6,8,16|","10,13|15|0","14|16|17","10,13|6,15,17|","5,12,17|1,2,4,16|","6,14,15|1,7,16|"].map(s=>s.split("|").map(x=>x?x.split(",").map(Number):[]));
+const MV="撞擊40 高速星星60 泰山壓頂85 破壞光線120,火花40 火焰輪60 噴射火焰90 大字爆炎110,水槍40 泡沫光線65 衝浪90 水炮110,藤鞭45 飛葉快刀55 能量球90 日光束120,電擊40 電光65 十萬伏特90 打雷110,冰凍之風40 極光束65 冰凍光束90 暴風雪110,空手劈40 借力摔60 波導彈90 近身戰120,溶解液40 毒液沖擊65 污泥炸彈90 垃圾射擊120,泥巴射擊35 掘地60 大地之力90 地震100,啄35 翅膀攻擊60 空氣斬75 勇鳥猛攻120,念力50 幻象光線65 精神強念90 未來預知120,吸血50 蟲咬60 蟲鳴90 超級角擊120,落石50 岩石封鎖60 力量寶石80 尖石攻擊100,舌舔30 暗影爪70 暗影球80 暗影潛襲120,龍之怒40 龍爪80 龍之波動85 逆鱗120,突襲40 咬住60 暗襲要害70 惡之波動80,子彈拳40 金屬爪50 鋼翼70 加農光炮80,妖精之風40 吸取之吻50 嬉鬧90 月亮之力95".split(",").map(s=>s.split(" ").map(x=>{const m=x.match(/(\D+)(\d+)/);return[m[1],+m[2]]}));
+const N="妙蛙種子 妙蛙草 妙蛙花 小火龍 火恐龍 噴火龍 傑尼龜 卡咪龜 水箭龜 綠毛蟲 鐵甲蛹 巴大蝶 獨角蟲 鐵殼昆蟲 大針蜂 波波 比比鳥 大比鳥 小拉達 拉達 烈雀 大嘴雀 阿柏蛇 阿柏怪 皮卡丘 雷丘 穿山鼠 穿山王 尼多蘭 尼多娜 尼多后 尼多朗 尼多力諾 尼多王 皮皮 皮可西 六尾 九尾 胖丁 胖可丁 超音蝠 大嘴蝠 走路草 臭臭花 霸王花 派拉斯 派拉斯特 毛球 摩魯蛾 地鼠 三地鼠 喵喵 貓老大 可達鴨 哥達鴨 猴怪 火爆猴 卡蒂狗 風速狗 蚊香蝌蚪 蚊香君 蚊香泳士 凱西 勇基拉 胡地 腕力 豪力 怪力 喇叭芽 口呆花 大食花 瑪瑙水母 毒刺水母 小拳石 隆隆石 隆隆岩 小火馬 烈焰馬 呆呆獸 呆殼獸 小磁怪 三合一磁怪 大蔥鴨 嘟嘟 嘟嘟利 小海獅 白海獅 臭泥 臭臭泥 大舌貝 刺甲貝 鬼斯 鬼斯通 耿鬼 大岩蛇 催眠貘 引夢貘人 大鉗蟹 巨鉗蟹 霹靂電球 頑皮雷彈 蛋蛋 椰蛋樹 卡拉卡拉 嘎啦嘎啦 飛腿郎 快拳郎 大舌頭 瓦斯彈 雙彈瓦斯 獨角犀牛 鑽角犀獸 吉利蛋 蔓藤怪 袋獸 墨海馬 海刺龍 角金魚 金魚王 海星星 寶石海星 魔牆人偶 飛天螳螂 迷唇姐 電擊獸 鴨嘴火獸 凱羅斯 肯泰羅 鯉魚王 暴鯉龍 拉普拉斯 百變怪 伊布 水伊布 雷伊布 火伊布 多邊獸 菊石獸 多刺菊石獸 化石盔 鐮刀盔 化石翼龍 卡比獸 急凍鳥 閃電鳥 火焰鳥 迷你龍 哈克龍 快龍 超夢 夢幻 菊草葉 月桂葉 大竺葵 火球鼠 火岩鼠 火暴獸 小鋸鱷 藍鱷 大力鱷 尾立 大尾立 咕咕 貓頭夜鷹 芭瓢蟲 安瓢蟲 圓絲蛛 阿利多斯 叉字蝠 燈籠魚 電燈怪 皮丘 皮寶寶 寶寶丁 波克比 波克基古 天然雀 天然鳥 咩利羊 茸茸羊 電龍 美麗花 瑪力露 瑪力露麗 樹才怪 蚊香蛙皇 毽子草 毽子花 毽子棉 長尾怪手 向日種子 向日花怪 陽陽瑪 烏波 沼王 太陽伊布 月亮伊布 黑暗鴉 呆河馬 夢妖 未知圖騰 果然翁 麒麟奇 榛果球 佛烈托斯 土龍弟弟 天蠍 大鋼蛇 布魯 布魯皇 千針魚 巨鉗螳螂 壺壺 赫拉克羅斯 狃拉 熊寶寶 圈圈熊 熔岩蟲 熔岩蝸牛 小山豬 長毛豬 太陽珊瑚 鐵炮魚 章魚桶 信使鳥 巨翅飛魚 盔甲鳥 戴魯比 黑魯加 刺龍王 小小象 頓甲 多邊獸2 驚角鹿 圖圖犬 無畏小子 戰舞郎 迷唇娃 電擊怪 鴨嘴寶寶 大奶罐 幸福蛋 雷公 炎帝 水君 幼基拉斯 沙基拉斯 班基拉斯 洛奇亞 鳳王 雪拉比 木守宮 森林蜥蜴 蜥蜴王 火稚雞 力壯雞 火焰雞 水躍魚 沼躍魚 巨沼怪 土狼犬 大狼犬 蛇紋熊 直衝熊 刺尾蟲 甲殼繭 狩獵鳳蝶 盾甲繭 毒粉蛾 蓮葉童子 蓮帽小童 樂天河童 橡實果 長鼻葉 狡猾天狗 傲骨燕 大王燕 長翅鷗 大嘴鷗 拉魯拉絲 奇魯莉安 沙奈朵 溜溜糖球 雨翅蛾 蘑蘑菇 斗笠菇 懶人獺 過動猿 請假王 土居忍士 鐵面忍者 脫殼忍者 咕妞妞 吼爆彈 爆音怪 幕下力士 鐵掌力士 露力麗 朝北鼻 向尾喵 優雅貓 勾魂眼 大嘴娃 可可多拉 可多拉 波士可多拉 瑪沙那 恰雷姆 落雷獸 雷電獸 正電拍拍 負電拍拍 電螢蟲 甜甜螢 毒薔薇 溶食獸 吞食獸 利牙魚 巨牙鯊 吼吼鯨 吼鯨王 呆火駝 噴火駝 煤炭龜 跳跳豬 噗噗豬 晃晃斑 大顎蟻 超音波幼蟲 沙漠蜻蜓 沙漠奈亞 夢歌奈亞 青綿鳥 七夕青鳥 貓鼬斬 飯匙蛇 月石 太陽岩 泥泥鰍 鯰魚王 龍蝦小兵 鐵螯龍蝦 天秤偶 念力土偶 觸手百合 搖籃百合 太古羽蟲 太古盔甲 醜醜魚 美納斯 飄浮泡泡 變隱龍 怨影娃娃 詛咒娃娃 夜骷顱 夜巨人 熱帶龍 風鈴鈴 阿勃梭魯 小果然 雪童子 冰鬼護 海豹球 海魔獅 帝牙海獅 珍珠貝 獵斑魚 櫻花魚 古空棘魚 愛心魚 寶貝龍 甲殼龍 暴飛龍 鐵啞鈴 金屬怪 巨金怪 雷吉洛克 雷吉艾斯 雷吉斯奇魯 拉帝亞斯 拉帝歐斯 蓋歐卡 固拉多 烈空坐 基拉祈 代歐奇希斯 草苗龜 樹林龜 土台龜 小火焰猴 猛火猴 烈焰猴 波加曼 波皇子 帝王拿波 姆克兒 姆克鳥 姆克鷹 大牙狸 大尾狸 圓法師 音箱蟀 小貓怪 勒克貓 倫琴貓 含羞苞 羅絲雷朵 頭蓋龍 戰槌龍 盾甲龍 護城龍 結草兒 結草貴婦 紳士蛾 三蜜蜂 蜂女王 帕奇利茲 泳圈鼬 浮潛鼬 櫻花寶 櫻花兒 無殼海牛 海牛獸 雙尾怪手 飄飄球 隨風球 捲捲耳 長耳兔 夢妖魔 烏鴉頭頭 魅力喵 東施喵 鈴鐺響 臭鼬噗 坦克臭鼬 銅鏡怪 青銅鐘 盆才怪 魔尼尼 小福蛋 聒噪鳥 花岩怪 圓陸鯊 尖牙陸鯊 烈咬陸鯊 小卡比獸 利歐路 路卡利歐 沙河馬 河馬獸 鉗尾蠍 龍王蠍 不良蛙 毒骷蛙 尖牙籠 螢光魚 霓虹魚 小球飛魚 雪笠怪 暴雪王 瑪狃拉 自爆磁怪 大舌舔 超甲狂犀 巨蔓藤 電擊魔獸 鴨嘴焰龍 波克基斯 遠古巨蜓 葉伊布 冰伊布 天蠍王 象牙豬 多邊獸Z 艾路雷朵 大朝北鼻 黑夜魔靈 雪妖女 洛托姆 由克希 艾姆利多 亞克諾姆 帝牙盧卡 帕路奇亞 席多藍恩 雷吉奇卡斯 騎拉帝納 克雷色利亞 霏歐納 瑪納霏 達克萊伊 謝米 阿爾宙斯 比克提尼 藤藤蛇 青藤蛇 君主蛇 暖暖豬 炒炒豬 炎武王 水水獺 雙刃丸 大劍鬼 探探鼠 步哨鼠 小約克 哈約克 長毛狗 扒手貓 酷豹 花椰猴 花椰猿 爆香猴 爆香猿 冷水猴 冷水猿 食夢夢 夢夢蝕 豆豆鴿 咕咕鴿 高傲雉雞 斑斑馬 雷電斑馬 石丸子 地幔岩 龐岩怪 滾滾蝙蝠 心蝙蝠 螺釘地鼠 龍頭地鼠 差不多娃娃 搬運小匠 鐵骨土人 修建老匠 圓蝌蚪 蟾蜍板 蟾蜍王 投摔鬼 打擊鬼 蟲寶包 寶包繭 保母蟲 百足蜈蚣 車輪球 蜈蚣王 木棉球 風妖精 百合根娃娃 裙兒小姐 野蠻鱸魚 黑眼鱷 混混鱷 流氓鱷 火紅不倒翁 達摩狒狒 沙鈴仙人掌 石居蟹 岩殿居蟹 滑滑小子 頭巾混混 象徵鳥 哭哭面具 死神棺 原蓋海龜 肋骨海龜 始祖小鳥 始祖大鳥 破破袋 灰塵山 索羅亞 索羅亞克 泡沫栗鼠 奇諾栗鼠 哥德寶寶 哥德小童 哥德小姐 單卵細胞球 雙卵細胞球 人造細胞卵 鴨寶寶 舞天鵝 迷你冰 多多冰 雙倍多多冰 四季鹿 萌芽鹿 電飛鼠 蓋蓋蟲 騎士蝸牛 哎呀球菇 敗露球菇 輕飄飄 胖嘟嘟 保姆曼波 電電蟲 電蜘蛛 種子鐵球 堅果啞鈴 齒輪兒 齒輪組 齒輪怪 麻麻小魚 麻麻鰻 麻麻鰻魚王 小灰怪 大宇怪 燭光靈 燈火幽靈 水晶燈火靈 牙牙 斧牙龍 雙斧戰龍 噴嚏熊 凍原熊 幾何雪花 小嘴蝸 敏捷蟲 泥巴魚 功夫鼬 師父鼬 赤面龍 泥偶小人 泥偶巨人 駒刀小兵 劈斬司令 爆爆頭水牛 毛頭小鷹 勇士雄鷹 禿鷲小兵 禿鷲娜 熔蟻獸 鐵蟻 單首龍 雙首暴龍 三首惡龍 燃燒蟲 火神蟲 勾帕路翁 代拉基翁 畢力吉翁 龍捲雲 雷電雲 萊希拉姆 捷克羅姆 土地雲 酋雷姆 凱路迪歐 美洛耶塔 蓋諾賽克特 哈力栗 胖胖哈力 布里卡隆 火狐狸 長尾火狐 妖火紅狐 呱呱泡蛙 呱頭蛙 甲賀忍蛙 掘掘兔 掘地兔 小箭雀 火箭雀 烈箭鷹 粉蝶蟲 粉蝶蛹 彩粉蝶 小獅獅 火炎獅 花蕾蕾 花疊疊 花潔夫人 坐騎小羊 坐騎山羊 頑皮熊貓 流氓熊貓 多麗米亞 妙喵 超能妙喵 獨劍鞘 雙劍鞘 堅盾劍怪 粉香香 芳香精 綿綿泡芙 胖甜妮 好啦魷 烏賊王 龜腳腳 龜足巨鎧 垃垃藻 毒藻龍 銅鑼蝦 鐵臂槍蝦 傘電蜥 光電傘蜥 寶寶暴龍 怪顎龍 冰雪龍 冰雪巨龍 仙子伊布 摔角鷹人 咚咚鼠 小碎鑽 黏黏寶 黏美兒 黏美龍 鑰圈兒 小木靈 朽木妖 南瓜精 南瓜怪人 冰寶 冰岩怪 嗡蝠 音波龍 哲爾尼亞斯 伊裴爾塔爾 基格爾德 蒂安希 胡帕 波爾凱尼恩 木木梟 投羽梟 狙射樹梟 火斑喵 炎熱喵 熾焰咆哮虎 球球海獅 花漾海獅 西獅海壬 小篤兒 喇叭啄鳥 銃嘴大鳥 貓鼬少 貓鼬探長 強顎雞母蟲 蟲電寶 鍬農炮蟲 好勝蟹 好勝毛蟹 花舞鳥 萌虻 蝶結萌虻 岩狗狗 鬃岩狼人 弱丁魚 好壞星 超壞星 泥驢仔 重泥挽馬 滴蛛 滴蛛霸 偽螳草 蘭螳花 睡睡菇 燈罩夜菇 夜盜火蜥 焰後蜥 童偶熊 穿著熊 甜竹竹 甜舞妮 甜冷美后 花療環環 智揮猩 投擲猴 膽小虫 具甲武者 沙丘娃 噬沙堡爺 拳海參 屬性：空 銀伴戰獸 小隕星 樹枕尾熊 爆焰龜獸 托戈德瑪魯 謎擬Ｑ 磨牙彩皮魚 老翁龍 破破舵輪 心鱗寶 鱗甲龍 杖尾鱗甲龍 卡璞・鳴鳴 卡璞・蝶蝶 卡璞・哞哞 卡璞・鰭鰭 科斯莫古 科斯莫姆 索爾迦雷歐 露奈雅拉 虛吾伊德 爆肌蚊 費洛美螂 電束木 鐵火輝夜 紙御劍 惡食大王 奈克洛茲瑪 瑪機雅娜 瑪夏多 毒貝比 四顎針龍 壘磊石 砲頭小丑 捷拉奧拉 美錄坦 美錄梅塔 敲音猴 啪咚猴 轟擂金剛猩 炎兔兒 騰蹴小將 閃焰王牌 淚眼蜥 變澀蜥 千面避役 貪心栗鼠 藏飽栗鼠 稚山雀 藍鴉 鋼鎧鴉 索偵蟲 天罩蟲 以歐路普 偷兒狐 狐大盜 幼棉棉 白蓬蓬 毛辮羊 毛毛角羊 咬咬龜 暴噬龜 來電汪 逐電犬 小炭仔 大炭車 巨炭山 啃果蟲 蘋裹龍 豐蜜龍 沙包蛇 沙螺蟒 古月鳥 刺梭魚 戽斗尖梭 毒電嬰 顫弦蠑螈 烤火蚣 大煉蚣 小八爪 八爪武師 來悲茶 怖思壺 迷布莉姆 提布莉姆 布莉姆溫 搗蛋小妖 詐唬魔 長毛巨魔 堵攔熊 喵頭目 魔靈珊瑚 蔥遊兵 踏冰人偶 死神板 小仙奶 霜奶仙 列陣兵 啪嚓海膽 雪吞蟲 雪絨蛾 巨石丁 冰砌鵝 愛管侍 莫魯貝可 銅象 大王銅象 雷鳥龍 雷鳥海獸 鰓魚龍 鰓魚海獸 鋁鋼龍 多龍梅西亞 多龍奇 多龍巴魯托 蒼響 藏瑪然特 無極汰那 熊徒弟 武道熊師 薩戮德 雷吉艾勒奇 雷吉鐸拉戈 雪暴馬 靈幽馬 蕾冠王".split(" ");
+const TS="37 37 37 1 1 19 2 2 2 b b b9 b7 b7 b7 09 09 09 0 0 09 09 7 7 4 4 8 8 7 7 78 7 7 78 h h 1 1 0h 0h 79 79 37 37 37 b3 b3 b7 b7 8 8 0 0 2 2 6 6 1 1 2 2 26 a a a 6 6 6 37 37 37 27 27 c8 c8 c8 1 1 2a 2a 4g 4g 09 09 09 2 25 7 7 2 25 d7 d7 d7 c8 a a 2 2 4 4 3a 3a 8 8 6 6 0 7 7 8c 8c 0 3 0 2 2 2 2 2 2a ah b9 5a 4 1 b 0 2 2e 25 0 0 2 4 1 0 c2 c2 c2 c2 c9 0 59 49 19 e e e9 a a 3 3 3 1 1 1 2 2 2 0 0 09 09 b9 b9 b7 b7 79 24 24 4 h 0h h h9 a9 a9 4 4 4 3 2h 2h c 2 39 39 39 0 3 3 b9 28 28 a f f9 2a d a a 0a b bg 0 89 g8 h h 27 bg bc b6 f5 0 0 1 1c 58 58 2c 2 2 59 29 g9 f1 f1 2e 8 8 0 0 0 6 6 5a 4 1 0 0 4 1 2 c8 c8 cf a9 19 a3 3 3 3 1 16 16 2 28 28 f f 0 0 b b b9 b b7 23 23 23 3 3f 3f 09 09 29 29 ah ah ah b2 b9 3 36 0 0 0 b8 b9 bd 0 0 0 6 6 0h c 0 0 fd gh gc gc gc 6a 6a 4 4 4 4 b b 37 7 7 2f 2f 2 2 18 18 1 a a 0 8 8e 8e 3 3f 09 e9 0 7 ca ca 28 28 2 2f 8a 8a c3 c3 cb cb 2 2 0 0 d d d d 39 a f a 5 5 52 52 52 2 2 2 2c 2 e e e9 ga ga ga c 5 g ea ea 2 8 e9 ga a 3 3 38 1 16 16 2 2 2g 09 09 09 0 02 b b 4 4 4 37 37 c c cg cg b b3 b9 b9 b9 4 2 2 3 3 2 28 0 d9 d9 0 0 d f9 0 0 a 7f 7f ga ga c ah 0 09 df e8 e8 e8 0 6 6g 8 8 7b 7f 76 76 3 2 2 29 53 53 f5 4g 0 8c 3 4 1 h9 b9 3 5 89 58 0 a6 cg d 5d 4d a a a ge 2e 1g 0 de a 2 2 f 3 0 a1 3 3 3 1 16 16 2 2 2 0 0 0 0 0 f f 3 3 1 1 2 2 a a 09 09 09 4 4 c c c a9 a9 8 8g 0 6 6 6 2 28 28 6 6 b3 b3 b3 b7 b7 b7 3h 3h 3 3 2 8f 8f 8f 1 1 3 bc bc f6 f6 a9 d d 2c 2c c9 c9 7 7 f f 0 0 a a a a a a 29 29 5 5 5 03 03 49 b bg 37 37 2d 2d 2 b4 b4 3g 3g g g g 4 4 4 a a d1 d1 d1 e e e 5 5 5 b b 84 6 6 e 8d 8d fg fg 0 09 09 f9 f9 1 bg fe fe fe b1 b1 g6 c6 36 9 49 e1 e4 89 e5 26 0a bg 3 3 36 1 1 1a 2 2 2f 0 08 09 19 19 b b b9 10 10 h h h 3 3 6 6f 0 a a gd gd gd h h h h fa fa c2 c2 72 7e 2 2 40 40 ce ce c5 c5 h 69 4h ch e e e gh d3 d3 d3 d3 5 5 9e 9e h f9 e8 ch ad 12 39 39 3d 1 1 1f 2 2 2h 09 09 09 0 0 b b4 b4 6 65 19 bh bh c c 2 72 72 8 8 2b 2b 3 3 3h 3h 71 71 06 06 3 3 3 h 0a 6 b2 b2 d8 d8 2 0 0 c9 0 1e 4g dh 2a 0e d3 e e6 e6 4h ah 3h 2h a a ag ad c7 b6 b6 4 g9 3g fe a gh 6d 7 7e cg 1d 4 g g 3 3 3 1 1 1 2 2 2 0 0 9 9 9g b ba ba f f 3 3 0 0 2 2c 4 4 c c1 c1 3e 3e 3e 8 8 92 2 2 47 47 1b 1b 6 6 d d a a ah fh fh fh f0 g d 6 5a 8d h h 6 4 5b 5b c 5 a0 4f g g 4e 45 2e 25 ge ed ed ed h 6 7e 6 6f f3 4 e 5 d a3".split(" ");
+const EV={};"1:16,2:32,4:16,5:36,7:16,8:36,10:7,11:10,13:7,14:10,16:18,17:36,19:20,21:20,23:22,25:30,27:22,29:16,30:36,32:16,33:36,35:30,37:30,39:30,41:22,43:21,44:32,46:24,48:31,50:26,52:28,54:33,56:28,58:30,60:25,61:40,63:16,64:36,66:28,67:40,69:21,70:32,72:30,74:25,75:40,77:40,79:37,81:30,84:31,86:34,88:38,90:30,92:25,93:38,96:26,98:28,100:30,102:30,104:28,109:35,111:42,116:32,118:33,120:30,129:20,138:40,140:40,147:30,148:55,152:16,153:32,155:14,156:36,158:18,159:30,161:15,163:20,165:18,167:22,170:27,175:20,177:25,179:15,180:30,183:18,187:18,188:27,191:22,194:20,204:31,209:23,216:30,218:38,220:33,223:25,228:24,231:25,236:20,246:30,247:55,252:16,253:36,255:16,256:36,258:16,259:36,261:18,263:20,265:7,266:10,268:10,270:14,271:30,273:14,274:30,276:22,278:25,280:20,281:30,283:22,285:23,287:18,288:36,290:20,293:20,294:40,296:24,300:25,304:32,305:42,307:37,309:26,316:26,318:30,320:40,322:33,325:32,328:35,329:45,331:32,333:35,339:30,341:30,343:36,345:40,347:40,349:30,353:37,355:37,361:42,363:32,364:44,371:30,372:50,374:20,375:45,387:18,388:32,390:14,391:36,393:16,394:36,396:14,397:34,399:15,401:10,403:15,404:30,408:30,410:30,412:20,415:21,418:26,420:25,422:30,425:28,427:30,431:38,434:34,436:33,443:24,444:48,447:30,449:34,451:40,453:37,456:31,459:40,495:17,496:36,498:17,499:36,501:17,502:36,504:20,506:16,507:32,509:20,511:24,513:24,515:24,517:30,519:21,520:32,522:27,524:25,525:38,527:30,529:31,532:25,533:38,535:25,536:36,540:20,541:31,543:22,544:30,546:30,548:30,551:29,552:40,554:35,557:34,559:39,562:34,564:37,566:37,568:36,570:30,572:30,574:32,575:41,577:32,578:41,580:35,582:35,583:47,585:34,588:36,590:39,592:40,595:36,597:40,599:38,600:49,602:39,603:45,605:42,607:41,608:50,610:38,611:48,613:37,616:36,619:50,622:43,624:52,627:54,629:54,633:50,634:64,636:59,650:16,651:36,653:16,654:36,656:16,657:36,659:20,661:17,662:35,664:9,665:12,667:35,669:19,670:30,672:32,674:32,677:25,679:35,680:45,682:30,684:30,686:30,688:39,690:48,692:37,694:30,696:39,698:39,704:40,705:50,708:30,710:30,712:37,714:48,722:17,723:34,725:17,726:34,728:17,729:34,731:14,732:28,734:20,736:20,737:30,739:30,742:25,744:25,747:38,749:30,751:22,753:34,755:24,757:33,759:27,761:18,762:30,767:30,769:42,782:35,783:45,810:16,811:35,813:16,814:35,816:16,817:35,819:24,821:18,822:38,824:10,825:30,827:18,829:20,831:24,833:22,835:25,837:18,838:34,840:30,843:36,846:26,848:30,850:28,852:35,854:30,856:32,857:42,859:32,860:42,868:30,872:30,878:34,885:50,886:60".split(",").forEach(s=>{const[a,b]=s.split(":");EV[+a]=+b});
+const LG=[144,145,146,150,151,243,244,245,249,250,251,...Array(10).fill(0).map((_,i)=>377+i),...Array(9).fill(0).map((_,i)=>480+i),490,491,492,493,494,638,639,640,641,642,643,644,645,646,647,648,649,716,717,718,719,720,721,772,773,785,786,787,788,789,790,791,792,793,794,795,796,797,798,799,800,801,802,803,804,805,806,807,808,809,888,889,890,891,892,893,894,895,896,897,898],ALL=[...Array(898)].map((_,i)=>i+1);
+const AR=[["草原",[0,3,11,9]],["水邊",[2,5]],["洞窟",[8,12,13,7,6]],["高山",[4,14,16,10,1,17,15]],["神祕之地",null]];
+const TN=["新手訓練家","短褲小子","登山男","遊客","老手訓練家","超級訓練家"];
+let RR=null;const RN=()=>RR?RR():Math.random();
+const K="pkrpg2",SC={},LM=400;let G,B,S="home",M="",BX={s:"new",t:-1,q:"",n:30,cf:0},BS=null,STX=null;
+const $=i=>document.getElementById(i),rnd=(a,b)=>a+Math.floor(Math.random()*(b-a+1));
+const ty=id=>TS[id-1].split("").map(c=>parseInt(c,36)),nm=m=>(m.foe?"敵方":"")+(m.fm?FM[m.fm-1].n:N[m.id-1])+(m.s?"（色違）":"")+(m.sh?"（暗影化）":"");
+const wt=id=>LG.includes(id)?.075:EV[id-1]?1.2:4;
+const pick=(p,f=wt)=>{p=p.filter(i=>!LOCK(i));let t=p.reduce((s,i)=>s+f(i),0),r=Math.random()*t;for(const i of p){r-=f(i);if(r<=0)return i}return p[0]};
+const evo=(id,L,a)=>{while(EV[id]&&L>=EV[id]&&!(a?LOCKALL.includes(id+1):LOCK(id+1)))id++;return id};
+const B0=id=>(LG.includes(id)?100:EV[id-1]&&EV[id]?62:EV[id-1]?82:EV[id]?44:66)+id%9;
+const mh=m=>Math.floor((Math.floor(B0(m.id)*2*m.L/100)+m.L+10)*(m.bm||1)*(m.fm?1.2:1));
+const sa=(m,k)=>Math.floor((Math.floor(B0(m.id)*2*m.L/100)+5+(m.id*k)%13)*(m.fm?1.25:1));
+const need=L=>Math.floor(L*L*1.2)+10;
+const eff=(a,ds)=>{let m=1;for(const d of ds){const[s,n,i]=CH[a];if(i.includes(d))return 0;if(s.includes(d))m*=2;else if(n.includes(d))m*=.5}return m};
+const SM=[["劇毒",7,{k:"s",v:"psn",a:.75}],["電磁波",4,{k:"s",v:"par",a:.8}],["催眠粉",10,{k:"s",v:"slp",a:.65}],["鬼火",1,{k:"s",v:"brn",a:.8}],["冰封視線",5,{k:"s",v:"frz",a:.5}],["超音波",0,{k:"c",a:.65}],["怪異光",13,{k:"c",a:.75}],["劍舞",0,{k:"b",s:"ak",v:2,self:1}],["鐵壁",16,{k:"b",s:"df",v:2,self:1}],["高速移動",10,{k:"b",s:"sp",v:2,self:1}],["恫嚇",13,{k:"b",s:"ak",v:-1}],["自我再生",0,{k:"h",r:.5}],["光合作用",3,{k:"h",r:.5}],["月光",17,{k:"h",r:.6}],["睡覺",10,{k:"h",r:1,slp:1}],["治癒鈴聲",0,{k:"th",r:.25,cure:1}],["芳香治療",3,{k:"th",r:.2,cure:1}],["治癒波動",10,{k:"th",r:.35}]],SX={psn:"中毒了",par:"麻痺了，可能動不了",slp:"睡著了",brn:"灼傷了",frz:"被凍住了"},SB={psn:["#a040a0","中毒"],par:["#f8d030","麻痺"],slp:["#889","睡眠"],brn:["#f08030","灼傷"],frz:["#98d8d8","凍結"]},GEN={1:{b:.1},4:{p:.2},5:{z:.1},7:{x:.25},10:{c:.1},17:{c:.1}},MX={火花:{b:.1},火焰輪:{b:.15},噴射火焰:{b:.12},大字爆炎:{b:.25},爆炸烈焰:{b:.3},神聖之火:{b:.5},藍色火焰:{b:.3},V熱焰:{b:.5},冰凍之風:{z:.08},極光束:{z:.1},冰凍光束:{z:.12},暴風雪:{z:.18},冰凍世界:{z:.35},念力:{c:.1},幻象光線:{c:.15},精神強念:{c:.2},未來預知:{c:.25},嬉鬧:{c:.2},吸血:{d:.5},吸取之吻:{d:.5},蟲咬:{f:.2},咬住:{f:.3},落石:{f:.3},空氣斬:{f:.3},泰山壓頂:{f:.3},舌舔:{p:.3},突襲:{pri:1},子彈拳:{pri:1},破壞光線:{rc:1},逆鱗:{sc:1},近身戰:{sd:1},勇鳥猛攻:{r:.33}},SK={b:"brn",z:"frz",p:"par",x:"psn"},STG=["掙扎",0,40],sg=s=>{s=s||0;return s>=0?(2+s)/2:2/(2-s)},spd=m=>Math.floor(sa(m,7)*sg(m.sp)*(m.st=="par"?.5:1)),ppM=v=>v[4]?v[4]:v[3]?5:v[2]<=45?10:v[2]<=70?7:v[2]<=95?5:3,pl=(m,v)=>ppM(v)-((m.pp||{})[v[0]]||0),ml=(v,m)=>`${v[0]}<br><small>${TY[v[1]]} ${v[3]?"變化":"威力"+v[2]}${edt(v)}${v[4]?" ★專屬":""}${m?` PP${pl(m,v)}/${ppM(v)}`:""}</small>`,cap=()=>Math.min(6,3+Math.floor(G.round/5)),bst=(f,w)=>{const a=avgL(),g=LG.includes(f.id);let e=0;if(topL()>50&&w)e=20;else if(a>30)e=rnd(8,17);else if(w&&a>10)e=rnd(5,10);if(g&&a>10)e+=rnd(3,6);if(e){f.dl=f.L;f.L=Math.min(LM,f.L+e)}f.hp=mh(f)},stb=m=>(m.st?`<span style="background:${SB[m.st][0]};color:#000;border-radius:4px;padding:0 4px;font-size:12px">${SB[m.st][1]}</span>`:"")+(m.ak?` 攻${m.ak>0?"+":""}${m.ak}`:"")+(m.df?` 防${m.df>0?"+":""}${m.df}`:"")+(m.sp?` 速${m.sp>0?"+":""}${m.sp}`:"")+(m.cf>0?'<span style="background:#c6f;color:#000;border-radius:4px;padding:0 4px;font-size:12px;margin-left:3px">混亂</span>':"");
+const SIG={3:["瘋狂植物",3,150],6:["爆炸烈焰",1,150],9:["加農水炮",2,150],25:["伏特攻擊",4,120],150:["精神擊破",10,100],154:["瘋狂植物",3,150],157:["爆炸烈焰",1,150],160:["加農水炮",2,150],249:["氣旋攻擊",9,100],250:["神聖之火",1,100],254:["瘋狂植物",3,150],257:["爆炸烈焰",1,150],260:["加農水炮",2,150],380:["薄霧球",10,70],382:["根源波動",2,110],383:["斷崖之劍",8,120],384:["畫龍點睛",9,120],385:["破滅之願",16,140],386:["精神爆發",10,140],389:["瘋狂植物",3,150],392:["爆炸烈焰",1,150],395:["加農水炮",2,150],483:["時空咆哮",14,150],484:["空間裂斬",14,100],487:["暗影潛襲",13,120],492:["種子閃光",3,120],493:["制裁光礫",0,100],494:["V熱焰",1,180],638:["聖劍",6,90],643:["藍色火焰",1,130],644:["雷擊",4,130],646:["冰凍世界",5,100],647:["神秘之劍",6,85],649:["科技爆破",0,120],717:["終焉之翼",15,80],718:["千箭齊發",8,90],719:["鑽石風暴",12,100],720:["異次元亂擊",15,100],721:["蒸汽爆炸",2,110],791:["流星閃衝",16,100],792:["月影光束",13,100],800:["光子噴湧",10,100],807:["等離子拳",4,100],888:["巨獸斬",16,100],889:["巨獸彈",16,100],890:["極巨炮",14,160],892:["水流連打",2,75]};
+const MEGA=[3,[6,"X"],[6,"Y"],9,15,18,65,80,94,115,127,130,142,[150,"X"],[150,"Y"],181,208,212,214,229,248,254,257,260,282,302,303,306,308,310,319,323,334,354,359,362,373,376,380,381,428,445,448,460,475,531,719],
+FM=[...MEGA.map(x=>{const id=[].concat(x)[0],sf=x[1]||"";return{id,k:"s",n:"超級"+N[id-1]+sf,st:N[id-1]+"進化石"+sf,c:"#f0c"}}),
+{id:384,k:"f",n:"超級烈空坐",c:"#2c6"},{id:382,k:"f",n:"原始蓋歐卡",c:"#36f"},{id:383,k:"f",n:"原始固拉多",c:"#e33"},{id:483,k:"f",n:"起源帝牙盧卡",c:"#fc3"},{id:484,k:"f",n:"起源帕路奇亞",c:"#fc3"},{id:487,k:"f",n:"起源騎拉帝納",c:"#fc3"},{id:492,k:"f",n:"天空席多藍恩",c:"#8f8"},{id:720,k:"f",n:"解放胡帕",c:"#a0f"},{id:888,k:"f",n:"蒼響（劍之王）",c:"#fc3"},{id:889,k:"f",n:"藏瑪然特（盾之王）",c:"#fc3"},
+{id:646,k:"u",n:"暗黑酋雷姆",p:644,c:"#555"},{id:646,k:"u",n:"焰白酋雷姆",p:643,c:"#eef"},
+{id:892,k:"x",n:"一擊流武道熊師",c:"#a0f",mv:["暗冥強襲拳",15,150,null,3,0,"ko"]},{id:892,k:"x",n:"連擊流武道熊師",c:"#39f",mv:["水流連打",2,40,null,3,.3]}];
+const stinfo=()=>{const s=Object.entries(G.ms||{}).filter(x=>x[1]>0).map(x=>x[0]+"×"+x[1]).join("　");return(s?"<br>超進化石："+s:"")+(G.cr>0?"<br>結合晶體×"+G.cr:"")};
+const fuseP=(u,p)=>Object.values(G.mons).filter(x=>x.id==p&&x.u!=u&&!G.team.includes(x.u)&&!G.gym[x.u]).sort((a,b)=>b.L-a.L)[0];
+function fmBtns(m){if(m.fm||m.L<150)return"";return FM.map((f,i)=>{if(f.id!=m.id||f.k=="x")return"";if(f.k=="s")return bt(`超進化：${f.n}（${f.st}×${(G.ms||{})[f.st]||0}）`,`evoForm(${m.u},${i})`,!((G.ms||{})[f.st]>0));if(f.k=="f")return bt(`突破：${f.n}`,`evoForm(${m.u},${i})`);return G.cr>0?bt(`合體：${f.n}（結合晶體＋${N[f.p-1]}）`,`evoForm(${m.u},${i})`,!fuseP(m.u,f.p)):""}).join("")}
+function evoForm(u,i){const m=G.mons[u],f=FM[i];if(!m||m.fm||m.id!=f.id)return;const a=N[m.id-1];
+if(f.k=="u"){const q=fuseP(u,f.p);if(!(G.cr>0)||!q)return;G.cr--;delete G.mons[q.u];m.L=Math.max(m.L,q.L)}
+else{if(m.L<150)return;if(f.k=="s"){if(!((G.ms||{})[f.st]>0))return;G.ms[f.st]--}}
+const o=mh(m);m.fm=i+1;m.hp+=mh(m)-o;M=`${a}變成了${f.n}！`;draw()}
+let PH=new WeakMap(),FXQ=new WeakMap(),SQ=[],ACT=0,SND=true;try{SND=localStorage.getItem("pkrpg2_snd")!=="0"}catch(e){}
+const FXON=()=>S=="battle"||S=="pvp"||S=="boss",fxs=(m,o)=>{FXQ.set(m,Object.assign(FXQ.get(m)||{},o))},pri=v=>(v&&(MX[v[0]]||{}).pri)||0,
+imm=(d,k)=>{const y=ty(d.id);return k=="brn"?y.includes(1):k=="frz"?y.includes(5)||d.bm>1:k=="psn"?y.includes(7)||y.includes(16):k=="par"?y.includes(4):k=="slp"?!!d.bm:k=="cf"?!!(S=="boss"&&BS&&d===BS.b):false},
+side=a=>S=="pvp"&&PB?(a.foe?PB.op:PB.my):S=="boss"&&BS?(a===BS.b?[a]:BS.T[0].concat(BS.T[1])):B?(a.foe?B.foes:B.solo?[G.mons[B.solo]]:G.team.map(u=>G.mons[u])):[a],
+bz=(a,d)=>{const r=spd(a)/Math.max(1,spd(d));return r>1.15&&RN()<Math.min(.4,(r-1)*.3)};
+function edt(v){const q=v[3];let r=[];if(q){const L={ak:"攻擊",df:"防禦",sp:"速度"};r.push(q.k=="h"?(q.slp?"全回復＋睡眠":"回復"+Math.round(q.r*100)+"%"):q.k=="th"?"全隊回復"+Math.round(q.r*100)+"%"+(q.cure?"＋解除異常":""):q.k=="s"?SB[q.v][1]:q.k=="c"?"混亂":(q.self?"自身":"對手")+L[q.s]+(q.v>0?"+":"")+q.v)}else{const e=Object.assign({},GEN[v[1]],MX[v[0]]),P={b:"灼傷",z:"凍結",p:"麻痺",x:"中毒",c:"混亂",f:"畏縮"};for(const k in P)if(e[k])r.push(P[k]+Math.round(e[k]*100)+"%");if(e.d)r.push("吸血");if(e.r)r.push("反動");if(e.pri)r.push("先制");if(e.rc)r.push("需休息");if(e.sc)r.push("自混亂");if(e.sd)r.push("防禦-1")}return r.length?"・"+r.join("・"):""}
+// ---- 音效（WebAudio 合成，無外部檔案）----
+let AC=null;const ac=()=>{if(!SND)return null;try{if(!AC)AC=new(window.AudioContext||window.webkitAudioContext)();if(AC.state=="suspended")AC.resume();return AC}catch(e){return null}};
+function tn(f,d,ty,v,at,sl){const c=ac();if(!c)return;const t=c.currentTime+(at||0),o=c.createOscillator(),g=c.createGain();o.type=ty||"square";o.frequency.setValueAtTime(f,t);if(sl)o.frequency.exponentialRampToValueAtTime(Math.max(20,sl),t+d);g.gain.setValueAtTime(v||.08,t);g.gain.exponentialRampToValueAtTime(.0001,t+d);o.connect(g);g.connect(c.destination);o.start(t);o.stop(t+d+.02)}
+function ns(d,v,at,fq){const c=ac();if(!c)return;const n=Math.floor(c.sampleRate*d),b=c.createBuffer(1,n,c.sampleRate),a=b.getChannelData(0);for(let i=0;i<n;i++)a[i]=(Math.random()*2-1)*(1-i/n);const s=c.createBufferSource(),g=c.createGain(),f=c.createBiquadFilter();f.type="lowpass";f.frequency.value=fq||2500;g.gain.value=v||.15;s.buffer=b;s.connect(f);f.connect(g);g.connect(c.destination);s.start(c.currentTime+(at||0))}
+const SFX={hit:o=>{ns(.1,.25,o,2600);tn(180,.1,"square",.12,o,70)},se:o=>{ns(.14,.3,o,4000);tn(260,.14,"sawtooth",.14,o,80);tn(520,.18,"square",.08,o+.07,300)},nve:o=>{ns(.08,.12,o,900);tn(110,.1,"sine",.12,o,70)},crit:o=>{ns(.16,.35,o,5000);tn(320,.2,"sawtooth",.16,o,60);tn(900,.1,"square",.08,o,500)},miss:o=>{ns(.18,.08,o,6000)},
+heal:o=>[523,659,784,1047].forEach((f,i)=>tn(f,.16,"sine",.1,o+i*.08)),buff:o=>tn(400,.25,"triangle",.1,o,900),debuff:o=>tn(600,.25,"triangle",.1,o,250),
+brn:o=>{ns(.35,.18,o,1800);tn(300,.3,"sawtooth",.06,o,500)},frz:o=>[1568,2093,1760,2349].forEach((f,i)=>tn(f,.12,"sine",.07,o+i*.05)),par:o=>{for(let i=0;i<4;i++)tn(200+i%2*400,.05,"sawtooth",.1,o+i*.04)},psn:o=>{tn(220,.3,"sine",.1,o,110);tn(180,.25,"sine",.1,o+.12,90)},slp:o=>{tn(330,.3,"sine",.08,o,220);tn(262,.4,"sine",.08,o+.25,165)},cf:o=>{for(let i=0;i<5;i++)tn(400+(i%2)*150,.08,"triangle",.08,o+i*.07)},
+faint:o=>tn(440,.5,"square",.1,o,60),win:o=>[523,659,784,1047,784,1047].forEach((f,i)=>tn(f,.18,"square",.09,o+i*.13)),lose:o=>[392,349,330,262].forEach((f,i)=>tn(f,.3,"triangle",.1,o+i*.2)),lvup:o=>[659,784,988,1319].forEach((f,i)=>tn(f,.12,"square",.08,o+i*.07))};
+function playQ(){if(!SQ.length)return;const q=SQ.splice(0);if(!SND||!ac())return;let o=0;q.slice(0,12).forEach(k=>{const f=SFX[k];if(f){f(o);o+={heal:.35,win:.7,lose:.9,faint:.25,frz:.25,par:.2,cf:.25,brn:.25,slp:.3}[k]||.2}})}
+function tsnd(){SND=!SND;try{localStorage.setItem("pkrpg2_snd",SND?"1":"0")}catch(e){}if(SND){ac();SFX.buff(0)}draw()}
+function fxRun(){requestAnimationFrame(()=>requestAnimationFrame(()=>{document.querySelectorAll(".hb i[data-to]").forEach(i=>{i.style.width=i.dataset.to+"%";i.removeAttribute("data-to")});document.querySelectorAll(".hn[data-f]").forEach(e=>{const f=+e.dataset.f,t=+e.dataset.t,s=performance.now(),st=w=>{const k=Math.min(1,(w-s)/500);e.textContent=Math.round(f+(t-f)*k);if(k<1&&e.isConnected)requestAnimationFrame(st)};e.removeAttribute("data-f");requestAnimationFrame(st)})}));playQ()}
+function act(a,d,mv,pp){ACT=0;let w="";
+if(a.rc){a.rc=0;return`${nm(a)}因為反動，無法動彈！`}
+if(a.st=="slp"){if(a.sl>0){a.sl--;SQ.push("slp");return`${nm(a)}正在熟睡…`}a.st=0;w=`${nm(a)}醒來了！`}
+if(a.st=="frz"){a.fc=(a.fc||0)+1;if(RN()<.2+.2*a.fc){a.st=0;a.fc=0;w+=`${nm(a)}的冰融化了！`}else{SQ.push("frz");return`${nm(a)}被凍住了，無法行動！`}}
+if(a.fl){a.fl=0;SQ.push("miss");return w+`${nm(a)}畏縮了，無法行動！`}
+if(a.st=="par"&&RN()<.25){SQ.push("par");return w+`${nm(a)}麻痺了，動不了！`}
+if(a.cf>0){a.cf--;if(a.cf<=0)w+=`${nm(a)}的混亂解除了！`;else{w+=`${nm(a)}正在混亂中！`;if(RN()<.33){const x=Math.max(1,Math.floor(((2*a.L/5+2)*40*sa(a,3)*sg(a.ak)/(sa(a,5)*sg(a.df))/50+2)*(.85+RN()*.15)));a.hp=Math.max(0,a.hp-x);SQ.push("cf");return w+`${nm(a)}攻擊了自己！(-${x})`}}}
+ACT=1;if(pp){a.pp=a.pp||{};a.pp[mv[0]]=(a.pp[mv[0]]||0)+1}return w+hit(a,d,mv)}
+function tick(m,L){m.fl=0;if(m.hp<=0)return;if(m.st=="psn"){const x=Math.max(1,Math.floor(mh(m)/8));m.hp=Math.max(0,m.hp-x);SQ.push("psn");L.push(`${nm(m)}受到毒的傷害！(-${x})`)}else if(m.st=="brn"){const x=Math.max(1,Math.floor(mh(m)/16));m.hp=Math.max(0,m.hp-x);SQ.push("brn");L.push(`${nm(m)}受到灼傷的傷害！(-${x})`)}}
+function stat(a,d,mv){const[n,,,q]=mv,h=`${nm(a)}使用${n}！`;
+if(q.k=="h"){const H=mh(a);if(a.hp>=H&&!(q.slp&&a.st))return h+"但是沒有效果…";const x=Math.min(H-a.hp,Math.ceil(H*q.r));a.hp+=x;if(a.foe)a.hc=(a.hc||0)+1;SQ.push("heal");let w=h+`${nm(a)}回復了體力！(+${x})`;if(q.slp){a.st="slp";a.sl=2;a.cf=0;w+=`${nm(a)}睡著了，狀態全部重置！`}return w}
+if(q.k=="th"){const T=side(a).filter(x=>x.hp>0);let t=0,c=0;T.forEach(x=>{const H=mh(x),y=Math.min(H-x.hp,Math.ceil(H*q.r));if(y>0){x.hp+=y;t+=y}if(q.cure&&(x.st||x.cf>0)){x.st=0;x.cf=0;x.fc=0;c++}});if(!t&&!c)return h+"但是沒有效果…";if(a.foe)a.hc=(a.hc||0)+1;SQ.push("heal");return h+`全隊回復了體力！(合計+${t})`+(c?"，異常狀態也解除了！":"")}
+if(RN()>(q.a||(q.k=="s"?.7:1)))return h+"但是沒有命中…";
+if(q.k=="s"){if(d.st||imm(d,q.v))return h+"但是沒有效果…";d.st=q.v;if(q.v=="slp")d.sl=1+Math.floor(RN()*3);if(q.v=="frz")d.fc=0;SQ.push(q.v);fxs(d,{s:q.v});return h+`${nm(d)}${SX[q.v]}！`}
+if(q.k=="c"){if(d.cf>0||imm(d,"cf"))return h+"但是沒有效果…";d.cf=2+Math.floor(RN()*3);SQ.push("cf");fxs(d,{s:"cf"});return h+`${nm(d)}混亂了！`}
+const o=q.self?a:d,c=o[q.s]||0,v=Math.max(-6,Math.min(6,c+q.v));o[q.s]=v;const w=q.s=="ak"?"攻擊":q.s=="df"?"防禦":"速度";SQ.push(q.v>0?"buff":"debuff");return h+`${nm(o)}的${w}`+(v==c?`已經無法再${q.v>0?"提升":"下降"}了！`:q.v>0?"大幅提升了！":"下降了！")}
+const SMT=[[[7,3,11,2],45,8],[[4,16],55,10],[[3,11,10,13],45,12],[[1,13,15],45,15],[[5,2],35,20],[[0,9,7,11],45,8],[[13,15,10],40,12],[[0,6,11,3,14],50,10],[[16,12,8,2,6],50,10],[[10,4,9,0,17],40,20],[[13,15,14,7],45,15],[[0,10,2,17],30,30],[[3],55,25],[[17,0,10],35,30],[[0,10,2],25,35],[[0,17],20,40],[[3,17],20,40],[[10,17],25,45]],SLC={};
+function slm(m){let r=m.id;while(EV[r-1])r--;if(!SLC[r]){const T=new Set([...ty(r),...ty(m.id)]),o=[];SMT.forEach((s,x)=>{if(s[0].some(y=>T.has(y))&&(Math.imul(r+x*997,2654435761)>>>0)%100<s[1])o.push([s[2],x])});o.sort((p,q)=>p[0]-q[0]);SLC[m.id+"_"+r]=o.slice(0,3);SLC[r]=1}const k=m.id+"_"+r;if(!SLC[k]){const T=new Set([...ty(r),...ty(m.id)]),o=[];SMT.forEach((s,x)=>{if(s[0].some(y=>T.has(y))&&(Math.imul(r+x*997,2654435761)>>>0)%100<s[1])o.push([s[2],x])});o.sort((p,q)=>p[0]-q[0]);SLC[k]=o.slice(0,3)}return SLC[k]}
+function mvs(m){const t=ty(m.id),a=t[0],b=t[1]??a,s=[[a,0,1],[b,1,10],[a,2,24],[b,3,40]];const r=s.filter(x=>m.L>=x[2]).map(x=>[MV[x[0]][x[1]][0],x[0],MV[x[0]][x[1]][1]]),sl=slm(m);sl.forEach(x=>{if(m.L>=x[0])r.push([SM[x[1]][0],SM[x[1]][1],0,SM[x[1]][2]])});if(m.L>100&&!m.foe&&!m.ns&&SIG[m.id]){const g=SIG[m.id];r.push([g[0],g[1],g[2],null,1])}if(m.fm&&FM[m.fm-1].mv)r.push(FM[m.fm-1].mv);if(m.ab)r.push(["真・波導彈",6,110,null,5]);return r}
+const mk=(id,L)=>{const f={id,L:Math.min(LM,L),foe:1,s:Math.random()<.01?1:0};if(LG.includes(id)){f.bm=1.5;f.dm=1.2}f.hp=mh(f);return f};
+const newMon=(id,L,s)=>{const m={u:++G.nu,id,L,xp:0,hp:0,s:s||0};m.hp=mh(m);G.mons[m.u]=m;G.dex[id]=2;if(s){G.dsx=G.dsx||{};G.dsx[id]=1}return m};
+function stm(){const n=Date.now();G.stc=G.stc||10;if(G.sta==null||G.stT==null){if(G.sta==null)G.sta=G.stc;G.stT=n}if(G.sta>=G.stc){G.sta=G.stc;G.stT=n;return}const k=Math.floor((n-G.stT)/600000);if(k>0){G.sta=Math.min(G.stc,G.sta+k);G.stT=G.sta>=G.stc?n:G.stT+k*600000}}
+const stTxt=()=>{stm();const r=G.sta<G.stc?Math.max(0,600000-(Date.now()-G.stT)):0;return`⚡體力 ${G.sta}/${G.stc}`+(r?`（${Math.floor(r/60000)}分${Math.floor(r%60000/1000)}秒後 +1）`:"")};
+const topL=()=>Math.max(...G.team.map(u=>G.mons[u].L)),gl=()=>Math.min(LM,15+10*G.round);
+function save(){try{localStorage.setItem(K,JSON.stringify(G))}catch(e){}}
+function fresh(){return{money:1500,balls:{b:10,g:2,u:0,m:0},items:{p:3,q:1,f:0,c:2},team:[],mons:{},gym:{},round:0,nu:0}}
+try{G=JSON.parse(localStorage.getItem(K))}catch(e){}
+if(!G||!G.mons)G=fresh();
+// ---------- 像素圖 ----------
+const tier=()=>1;
+function spx(id,fm){const q=tier(),key=id+"_"+(fm||0)+"_"+q;if(SC[key])return SC[key];let s=(id*2654435761^(fm?fm*40503:0))>>>0;const r=()=>{s=(s+1831565813)|0;let t=Math.imul(s^s>>>15,1|s);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296};
+const T=ty(id),F=fm?FM[fm-1]:null,c1=TC[T[0]],c2=T[1]!=null?TC[T[1]]:"rgba(255,255,255,.35)",ol=F?F.c:"#111",g=[];
+for(let y=0;y<12;y++){const row=[];for(let x=0;x<6;x++)row.push(r()<.3+x*.13-Math.abs(y-5.5)*.05||(x>=4&&y>=2&&y<=9));g.push(row.concat([...row].reverse()))}
+for(let y=3;y<=5;y++)for(let x=3;x<=8;x++)g[y][x]=true;
+const m=[1,2,3,6][q-1],cv=document.createElement("canvas");cv.width=cv.height=14*m;const c=cv.getContext("2d");
+const f=(x,y)=>g[y]&&g[y][x];
+if(q==1){
+for(let y=0;y<12;y++)for(let x=0;x<12;x++)if(!g[y][x]&&(f(x-1,y)||f(x+1,y)||f(x,y-1)||f(x,y+1))){c.fillStyle=ol;c.fillRect(x+1,y+1,1,1)}
+for(let y=0;y<12;y++)for(let x=0;x<12;x++)if(g[y][x]){c.fillStyle=c1;c.fillRect(x+1,y+1,1,1);if(r()<.3){c.fillStyle=c2;c.fillRect(x+1,y+1,1,1)}}
+c.fillStyle="#fff";c.fillRect(4,5,1,2);c.fillRect(9,5,1,2);c.fillStyle="#000";c.fillRect(4,6,1,1);c.fillRect(9,6,1,1);
+}else{
+const th=q>=3?Math.max(1,Math.floor(m/3)):m,k=Math.floor(m/3);
+for(let y=0;y<12;y++)for(let x=0;x<12;x++){if(!g[y][x])continue;const X=(x+1)*m,Y=(y+1)*m;c.globalAlpha=1;c.fillStyle=c1;c.fillRect(X,Y,m,m);
+for(let j=0;j<m;j++)for(let i=0;i<m;i++){const z=r();if(z<.22){c.globalAlpha=.55;c.fillStyle=c2;c.fillRect(X+i,Y+j,1,1)}else if(z<.4&&q>=3){c.globalAlpha=.1;c.fillStyle="#000";c.fillRect(X+i,Y+j,1,1)}c.globalAlpha=1}
+c.globalAlpha=.1*(q-1);c.fillStyle="#fff";c.fillRect(X,Y,m,Math.ceil(m/2));c.fillStyle="#000";c.fillRect(X,Y+Math.floor(m/2),m,Math.ceil(m/2));c.globalAlpha=1;
+if(q>=3){const e=Math.max(1,Math.ceil(m/3));if(!f(x-1,y)){c.globalAlpha=.2;c.fillStyle="#fff";c.fillRect(X,Y,e,m)}if(!f(x,y+1)){c.globalAlpha=.28;c.fillStyle="#000";c.fillRect(X,Y+m-e,m,e)}c.globalAlpha=1}
+if(k>=1){const l=!f(x-1,y),rr=!f(x+1,y),u=!f(x,y-1),d=!f(x,y+1);if(l&&u)c.clearRect(X,Y,k,k);if(rr&&u)c.clearRect(X+m-k,Y,k,k);if(l&&d)c.clearRect(X,Y+m-k,k,k);if(rr&&d)c.clearRect(X+m-k,Y+m-k,k,k)}}
+c.globalAlpha=1;c.fillStyle=ol;
+for(let y=0;y<12;y++)for(let x=0;x<12;x++){if(g[y][x])continue;const X=(x+1)*m,Y=(y+1)*m;if(f(x-1,y))c.fillRect(X,Y,th,m);if(f(x+1,y))c.fillRect(X+m-th,Y,th,m);if(f(x,y-1))c.fillRect(X,Y,m,th);if(f(x,y+1))c.fillRect(X,Y+m-th,m,th)}
+const E=(x,y,w,h)=>c.fillRect(x*m,y*m,w*m,h*m);c.fillStyle="#fff";E(4,5,1,2);E(9,5,1,2);c.fillStyle="#000";const p0=q>=3?Math.floor(m*.25):0,pw=q>=3?Math.ceil(m*.6):m;c.fillRect(4*m+p0,6*m,pw,m);c.fillRect(9*m+p0,6*m,pw,m);
+if(q>=3){c.fillStyle="#fff";const h=Math.max(1,Math.floor(m/4));c.fillRect(4*m+p0,6*m,h,h);c.fillRect(9*m+p0,6*m,h,h)}
+}
+return SC[key]=cv.toDataURL()}
+// ---------- UI 元件 ----------
+const AU="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/",spr=(id,fm,s)=>AU+(s?"shiny/":"")+id+".png",ig=(id,fm,s,a)=>`<img src="${spr(id,fm,s)}" onerror="ie(this,${id},${fm||0},${s?1:0})" ${a}>`;
+function ie(e,id,fm,s){const n=(+e.dataset.n||0)+1;e.dataset.n=n;const P=String(id).padStart(3,"0");if(n==1)e.src="https://cdn.jsdelivr.net/gh/PokeAPI/sprites@master/sprites/pokemon/other/official-artwork/"+(s?"shiny/":"")+id+".png";else if(n==2)e.src="https://assets.pokemon.com/assets/cms2/img/pokedex/detail/"+P+".png";else{e.onerror=null;e.style.imageRendering="pixelated";e.src=spx(id,fm)}}
+const bt=(l,f,d)=>`<button ${d?"disabled":""} onclick="${f}">${l}</button>`;
+const tb=id=>ty(id).map(t=>`<span style="background:${TC[t]};color:#000;border-radius:4px;padding:0 4px;font-size:12px;margin-right:3px">${TY[t]}</span>`).join("");
+const bar=(a,b,c)=>`<div class=bar><i style="width:${Math.max(0,a/b*100)}%;background:${c}"></i></div>`;
+const card=(m,x="")=>{const H=mh(m),an=FXON(),pv=PH.get(m),dl=an&&pv!=null?m.hp-pv:0,fx=an?FXQ.get(m):null;PH.set(m,m.hp);if(fx)FXQ.delete(m);
+const n=Math.max(0,m.hp/H*100),pp=dl?Math.max(0,Math.min(100,pv/H*100)):n,col=n>50?"#4c4":n>25?"#ec3":"#d44",ic=(dl<0?(fx&&fx.k=="crit"?"crit":"hurt"):dl>0?"healed":"")+(m.st?" ps-"+m.st:"")+(m.cf>0?" ps-cf":""),cc=fx&&fx.s?" sf-"+fx.s:"";
+return`<div class="card${cc}"><div class=row><span style="position:relative;display:inline-block">${ig(m.id,m.fm,m.s,`width=64 height=64 class="${ic}"${m.sh?' style="box-shadow:0 0 10px 3px #a0f;filter:brightness(.7) saturate(1.4)"':""}`)}${m.sh?'<b style="position:absolute;top:-6px;left:-6px">🌑</b>':""}${m.s?'<b style="position:absolute;top:-4px;right:-4px">✨</b><b style="position:absolute;bottom:-2px;left:-4px">✦</b>':""}${dl?`<b class="dn ${dl<0?"dm":"dh"}">${dl<0?dl:"+"+dl}</b>`:""}</span><div style="flex:1"><b>${nm(m)}</b> Lv${m.dl||m.L} ${tb(m.id)}${stb(m)}<br>HP <span class=hn${dl?` data-f=${pv} data-t=${m.hp}`:""}>${dl?pv:m.hp}</span>/${H} <small style="color:#9ab">速度${spd(m)}</small><div class="bar hb${n<25?" lw":""}"><i class=g style="width:${dl<0?pp:n}%"${dl<0?` data-to=${n}`:""}></i><i class=f style="width:${dl?pp:n}%;background:${col}"${dl?` data-to=${n}`:""}></i></div>${m.foe?"":`EXP ${m.xp}/${need(m.L)}${bar(m.xp,need(m.L),"#48f")}`}</div></div>${x}</div>`};
+let GR=[];const go=s=>{S=s;BX.cf=0;if(s!="gacha")GR=[];draw()};
+function draw(){G.dex=G.dex||{};G.dc=G.dc||0;G.items.r=G.items.r||0;G.items.sd=G.items.sd||0;G.items.tk=G.items.tk||0;G.items.pc=G.items.pc||0;G.items.fw=G.items.fw||0;G.items.gt=G.items.gt||0;stm();if(S!="battle"&&S!="pvp")for(const u in G.mons){const x=G.mons[u];x.st=x.sl=x.ak=x.df=x.sp=x.cf=x.fc=x.rc=x.fl=x.hc=0}const sc={home,areas,box,shop,gacha,gym,battle,starter,dex,sv,lk,tr,pvp,boss,quests,stories,story}[S];$("app").innerHTML=(M?`<div class=card>${M}</div>`:"")+sc();M="";fxRun();save()}
+function addXp(m,x,L){const o=mh(m);m.xp+=x;while(m.L<LM&&m.xp>=need(m.L)){m.xp-=need(m.L);m.L++;L.push(`${nm(m)}升到 Lv${m.L}！`),SQ.push("lvup")}if(m.L>=LM)m.xp=0;if(m.hp>0)m.hp+=mh(m)-o}
+// ---------- 畫面 ----------
+function starter(){return`<h3>選擇你的第一隻寶可夢</h3>`+[1,4,7,25].map(i=>bt(N[i-1],`pickStarter(${i})`)).join("")}
+function pickStarter(i){const m=newMon(i,5);G.team=[m.u];G.m0=m.u;M=`獲得 ${N[i-1]}！`;go("home")}
+function home(){if(!G.team.length)return starter();const t=G.team.map(u=>G.mons[u]),b=G.balls,i=G.items;
+return`<h3>寶可夢 RPG</h3><div class=card>金錢 $${G.money}<br>寶貝球${b.b} 超級球${b.g} 高級球${b.u} 大師球${b.m}<br>傷藥${i.p} 好傷藥${i.q} 全能藥${i.f} 神奇糖果${i.c} 活力藥${i.r||0} 深淵碎片${i.sd||0} 入場券${i.tk||0} 移動中心${i.pc||0} 抽獎券${i.gt||0}<br>${stTxt()}<br>寄放區 ${Object.keys(G.mons).length-t.length} 隻（無上限）${stinfo()}</div>`+t.map(m=>card(m)).join("")+
+bt("野外探險","go('areas')")+bt("訓練家對戰","trainer()")+bt("道館","go('gym')")+bt("隊伍／寄放／訓練","go('box')")+bt("商店","go('shop')")+bt("抽寶可夢","go('gacha')")+bt("任務"+qBadge(),"go('quests')")+bt("支線"+stBadge(),"go('stories')")+bt("健康中心（免費）","heal()")+`<br><small>`+bt("連線","go('lk')")+bt("圖鑑","go('dex')")+bt("存檔管理","go('sv')")+bt("重置","if(confirm('確定清除全部？')){G=fresh();go('home')}")+`</small>`}
+function imp(){const t=prompt("貼上存檔");try{const g=JSON.parse(t);if(g&&g.mons){G=g;go("home")}}catch(e){M="存檔格式錯誤";draw()}}
+function dsync(){G.dsx=G.dsx||{};G.dsh=G.dsh||{};for(const u in G.mons){const y=G.mons[u];if(y.s)G.dsx[y.id]=1;if(y.sh)G.dsh[y.id]=1}}
+function dex(){dsync();if(BX.d=="t")return`<h3>圖鑑</h3>`+dexTabs("t")+`<br>`+storyDex();const d=BX.d||"n",c=Object.values(G.dex).filter(v=>v==2).length,s=Object.keys(G.dex).length,src=d=="n"?G.dex:d=="s"?G.dsx:G.dsh,ef=d=="h"?";box-shadow:0 0 6px 2px #a0f;filter:brightness(.7)":"";
+return`<h3>圖鑑</h3>`+dexTabs(d)+`<br>`+(d=="n"?`捕獲 ${c}/898　發現 ${s}/898<br>`+bt("領取獎勵（每捕獲10種：$2000＋神奇糖果）","claim()",Math.floor(c/10)<=G.dc):`${d=="s"?"色違":"暗影"}收集 ${Object.keys(src).length}/898<br>`)+bt("返回","go('home')")+`<div style="display:flex;flex-wrap:wrap;gap:4px;font-size:12px">`+ALL.map(i=>{const v=src[i];return`<span class=card style="margin:0;padding:3px;width:calc(33% - 8px);opacity:${v?1:.4}">${v?`${ig(i,0,d=="s",`width=24 height=24 style="vertical-align:middle${ef}"`)} `:""}${i} ${v?N[i-1]+(d=="n"?(v==2?" ✔":""):d=="s"?" ✨":" 🌑"):"???"}</span>`}).join("")+`</div>`}
+const dexTabs=d=>[["n","普通"],["s","色違"],["h","暗影"],["t","劇情"]].map(x=>bt(x[1],`BX.d='${x[0]}';BX.sr=0;draw()`,d==x[0])).join(""),SCH={s1:892,s2:250,s3:282,s4:448};
+function storyDex(){G.st=G.st||{};const ids=Object.keys(ST).filter(k=>{const t=G.st[k]||{};return t.d||t.i>0||ST[k].ok()});let h=bt("返回","go('home')")+`<br>已解鎖劇情 ${ids.length}/${Object.keys(ST).length}<br>`;if(!ids.length)return h+`<div class=card>尚無已解鎖的劇情。</div>`;
+for(const k of ids){const s=ST[k],t=G.st[k]||{},d=!!t.d;h+=`<div class=card><div class=row>${ig(SCH[k],0,0,`width=48 height=48${d?"":' style="filter:brightness(.4)"'}`)}<div style="flex:1"><b>${s.n}</b><br>限定角色：${d?s.ch:"???"}<br><small>${d?"✔ 已完成":t.i>0?"進行中（"+t.i+"/"+s.S.length+"）":"可開始"}</small></div></div>`+(d?bt(BX.sr==k?"收起劇情":"回顧劇情",`BX.sr=BX.sr=='${k}'?0:'${k}';draw()`):"")+(d&&BX.sr==k?`<div class=log>${storyText(k)}</div>`:"")+`</div>`}return h}
+function storyText(k){const o=[];for(const p of ST[k].S){if(p.k!="say")continue;try{o.push((typeof p.t=="function"?p.t():p.t).split("|").join("<br>"))}catch(e){}}return o.join("<hr>")}
+function claim(){const n=Math.floor(Object.values(G.dex).filter(v=>v==2).length/10)-G.dc;if(n>0){G.dc+=n;G.money+=2000*n;G.items.c+=n;M=`領取 $${2000*n} 與神奇糖果 x${n}`}draw()}
+function sell(u){const m=G.mons[u];if(!m||G.team.includes(u)||G.gym[u])return;const p=m.L*20*(m.s?10:1);delete G.mons[u];G.money+=p;M=`賣出 ${nm(m)} 獲得 $${p}`;draw()}
+function sv(){let h=`<h3>存檔管理</h3><div class=card>遊戲每個動作都會自動存檔在此瀏覽器。可另存到3個欄位，或下載成檔案備份（換裝置／清除瀏覽器資料前請先下載）。</div>`;
+for(let i=1;i<=3;i++){let d=null;try{d=JSON.parse(localStorage.getItem(K+"s"+i))}catch(e){}
+h+=`<div class=card><b>欄位${i}</b> `+(d?`${new Date(d.t).toLocaleString()}<br>$${d.money}｜寶可夢${Object.keys(d.mons).length}隻｜道館第${d.round+1}輪`:"（空）")+`<br>`+bt("存入",`slot(${i},1)`)+bt("讀取",`slot(${i},0)`,!d)+`</div>`}
+return h+`<div class=card><b>存檔碼（手機最可靠）</b><br>`+bt("產生存檔碼","gen()")+`<textarea id=sc rows=4 style="width:100%;box-sizing:border-box" placeholder="按「產生存檔碼」後，長按全選並複製，貼到備忘錄保存。要讀取時，把存檔碼貼在這裡"></textarea>`+bt("讀取存檔碼","ld()")+`</div>`+bt("存到「檔案」（iPhone 建議）","shareSave()")+bt("一般下載","dl()")+`<label class=card style="display:block">讀取存檔檔案：<input type=file onchange="ul(this)"></label>`+bt("返回","go('home')")}
+function slot(i,w){try{if(w){G.t=Date.now();localStorage.setItem(K+"s"+i,JSON.stringify(G));M="已存入欄位"+i}else{G=JSON.parse(localStorage.getItem(K+"s"+i));M="已讀取欄位"+i}}catch(e){M="存取失敗"}draw()}
+function gen(){const t=$("sc");t.value=JSON.stringify(G);t.focus();t.select();try{navigator.clipboard.writeText(t.value);M2=1}catch(e){}}
+function ld(){try{const g=JSON.parse($("sc").value);if(!g.mons)throw 0;G=g;M="已讀取存檔碼"}catch(e){M="存檔碼格式錯誤"}draw()}
+function shareSave(){const f=new File([JSON.stringify(G)],"pokemon_save.json",{type:"application/json"});if(navigator.canShare&&navigator.canShare({files:[f]}))navigator.share({files:[f]}).catch(()=>{});else dl()}
+function dl(){const a=document.createElement("a");document.body.appendChild(a);a.href=URL.createObjectURL(new Blob([JSON.stringify(G)],{type:"application/json"}));a.download="pokemon_save.json";a.click()}
+function ul(el){const r=new FileReader();r.onload=()=>{try{const g=JSON.parse(r.result);if(!g.mons)throw 0;G=g;M="存檔檔案已讀取"}catch(e){M="檔案格式錯誤"}draw()};r.readAsText(el.files[0])}
+// ===== 連線（WebRTC，手動交換代碼）=====
+let LK={},TR=null,PB=null;
+const enc=d=>btoa(unescape(encodeURIComponent(JSON.stringify(d)))),dec=t=>JSON.parse(decodeURIComponent(escape(atob(t.trim()))));
+const send=o=>{try{LK.dc.send(JSON.stringify(o))}catch(e){}};
+const mul=a=>()=>{a=(a+1831565813)|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296};
+const waitIce=pc=>new Promise(r=>{if(pc.iceGatheringState=="complete")r();else{pc.onicegatheringstatechange=()=>pc.iceGatheringState=="complete"&&r();setTimeout(r,4000)}});
+function newPC(h){try{LK.dc&&LK.dc.close();LK.pc&&LK.pc.close()}catch(e){}LK={host:h,pc:new RTCPeerConnection({iceServers:[{urls:"stun:stun.l.google.com:19302"}]})};if(!h)LK.pc.ondatachannel=e=>{LK.dc=e.channel;wire(LK.dc)};return LK.pc}
+function wire(d){d.onopen=()=>{LK.up=1;M="連線成功！";S="lk";draw()};d.onclose=()=>{LK.up=0;PB=null;TR=null;if(BS&&(BS.ph=="act"||BS.ph=="rep"))BS=null;M="連線已中斷";if(S!="battle")draw()};d.onmessage=e=>onMsg(JSON.parse(e.data))}
+async function lkHost(){try{const pc=newPC(1);LK.dc=pc.createDataChannel("g");wire(LK.dc);await pc.setLocalDescription(await pc.createOffer());await waitIce(pc);LK.off=enc(pc.localDescription)}catch(e){M="此瀏覽器不支援連線，請用 Safari／Chrome 直接開檔案"}draw()}
+async function lkJoin(){const v=LK.in1;try{const pc=newPC(0);LK.in1=v;await pc.setRemoteDescription(dec(v));await pc.setLocalDescription(await pc.createAnswer());await waitIce(pc);LK.ans=enc(pc.localDescription)}catch(e){M="主機代碼錯誤"}draw()}
+async function lkFin(){try{await LK.pc.setRemoteDescription(dec(LK.in2));M="已送出，等對方完成後會自動連上…"}catch(e){M="回覆碼錯誤"}draw()}
+function lkClose(){try{LK.dc&&LK.dc.close();LK.pc&&LK.pc.close()}catch(e){}LK={};PB=null;TR=null;BS=null;go("lk")}
+function shareGame(){const c=document.documentElement.cloneNode(true);c.querySelector("#app").innerHTML="";const f=new File(["<!DOCTYPE html>"+c.outerHTML],"pokemon_rpg.html",{type:"text/html"});if(navigator.canShare&&navigator.canShare({files:[f]}))navigator.share({files:[f]}).catch(()=>{});else{const a=document.createElement("a");a.href=URL.createObjectURL(f);a.download="pokemon_rpg.html";a.click()}}
+function lk(){let h=`<h3>連線</h3>`+bt("返回","go('home')")+bt("分享遊戲檔案給朋友","shareGame()");
+if(LK.up){h+=`<div class=card>✅ 已連線。交換與對戰都需雙方同意。</div>`;
+if(LK.inv)h+=`<div class=card>對方邀請你連線對戰！`+bt("接受","pvpAcc(1)")+bt("拒絕","pvpAcc(0)")+`</div>`;
+if(LK.wait)h+=`<div class=card>已送出邀請，等待對方同意…</div>`;
+if(LK.binv)h+=`<div class=card>對方邀請你合力挑戰 Boss！`+bt("接受","bossAcc(1)")+bt("拒絕","bossAcc(0)")+`</div>`;if(LK.bwait)h+=`<div class=card>已送出 Boss 邀請，等待對方同意…</div>`;return h+bt("交換寶可夢","go('tr')")+bt("邀請對戰","pvpInv()",!!LK.wait)+bt("邀請打Boss（雙人）","bossInv()",!!LK.bwait)+bt("中斷連線","lkClose()")}
+return h+`<div class=card><b>步驟</b><br>1. 按「分享遊戲檔案」傳給朋友（AirDrop／LINE），雙方都用瀏覽器開啟。<br>2. 甲按「建立連線」，把主機代碼傳給乙。<br>3. 乙貼上代碼、按「產生回覆碼」，把回覆碼傳給甲。<br>4. 甲貼上回覆碼、按「確認連線」，雙方即連上。</div>`+bt("建立連線（甲）","lkHost()")+(LK.off?`<div class=card>主機代碼（複製給乙）<textarea rows=3 style="width:100%" readonly onclick="this.select()">${LK.off}</textarea>貼上乙的回覆碼<textarea rows=3 style="width:100%" oninput="LK.in2=this.value">${LK.in2||""}</textarea>`+bt("確認連線","lkFin()")+`</div>`:"")+`<div class=card><b>加入（乙）</b> 貼上甲的主機代碼<textarea rows=3 style="width:100%" oninput="LK.in1=this.value">${LK.in1||""}</textarea>`+bt("產生回覆碼","lkJoin()")+(LK.ans?`<br>回覆碼（複製給甲）<textarea rows=3 style="width:100%" readonly onclick="this.select()">${LK.ans}</textarea>`:"")+`</div>`}
+// 交換
+function tr(){TR=TR||{mine:null,t:null,om:0,ot:0};const mm=TR.mine&&G.mons[TR.mine];
+return`<h3>交換寶可夢</h3><div class=card>雙方都同意才會交換，各付 $500。<br>我提供：${mm?nm(mm)+" Lv"+mm.L:"（未選）"}<br>對方提供：${TR.t?nm(TR.t)+" Lv"+TR.t.L:"（尚未選）"}<br>我${TR.om?"已":"未"}同意／對方${TR.ot?"已":"未"}同意</div>`+(TR.t?card(TR.t):"")+bt("同意交換","trOk()",!(mm&&TR.t&&G.money>=500&&!TR.om))+bt("返回連線選單","go('lk')")+`<h4>選擇要提供的寶可夢</h4>`+Object.values(G.mons).map(m=>card(m,bt("提供",`trPick(${m.u})`))).join("")}
+function trPick(u){TR=TR||{};const m=G.mons[u];TR.mine=u;TR.om=TR.ot=0;send({t:"offer",m:{id:m.id,L:m.L,s:m.s,xp:m.xp,sh:m.sh,fm:m.fm}});draw()}
+function trOk(){const m=G.mons[TR.mine];TR.om=1;send({t:"ok",mine:{id:m.id,L:m.L},theirs:{id:TR.t.id,L:TR.t.L}});trChk()}
+function trChk(){if(TR.om&&TR.ot){const m=G.mons[TR.mine];if(!m||G.money<500||LOCK(TR.t.id)){M="交換失敗（金錢不足、寶可夢不存在，或對方的寶可夢是尚未解鎖的劇情限定角色）";TR.om=TR.ot=0;return draw()}
+G.money-=500;const i=G.team.indexOf(m.u);delete G.mons[m.u];delete G.gym[m.u];const n=newMon(TR.t.id,TR.t.L,TR.t.s);n.xp=TR.t.xp||0;n.sh=TR.t.sh;n.fm=TR.t.fm;n.hp=mh(n);if(i>=0)G.team[i]=n.u;M=`交換完成！獲得 ${nm(n)}（花費 $500）`;TR=null;return go("lk")}draw()}
+// 連線對戰（雙方各用隊伍複本、滿血，不影響本身寶可夢；勝者 +$1000）
+const snap=()=>G.team.map(u=>{const m=G.mons[u];return{id:m.id,L:m.L,s:m.s,xp:0,hp:mh(m),sh:m.sh,fm:m.fm,ns:1}});
+function pvpInv(){send({t:"inv"});LK.wait=1;draw()}
+function pvpAcc(y){LK.inv=0;if(!y){send({t:"no"});return draw()}const seed=rnd(1,1e9),t=snap();LK.ps={seed,my:t};send({t:"acc",seed,team:t});draw()}
+function startPB(seed,my,op){PH=new WeakMap();FXQ=new WeakMap();SQ.length=0;PB={seed,my,op:op.map(x=>({...x,foe:1})),a:0,oa:0,n:0,mine:null,theirs:null,log:["連線對戰開始！"],ph:"act",rep:{}};go("pvp")}
+function pvpAct(k,i){if(PB.mine||PB.ph!="act")return;PB.mine={k,i};send({t:"act",a:PB.mine});tryRes();draw()}
+function pvpQuit(){send({t:"act",a:{k:"x"}});endPB(false);draw()}
+function pvpRep(i){if(!PB.rep.me)return;PB.a=i;PB.rep.me=false;send({t:"rep",i});chk();draw()}
+function chk(){if(!PB.rep.me&&!PB.rep.op)PB.ph="act"}
+function endPB(w){SQ.push(w?"win":"lose");PB.log.push(w?"你贏了！獲得 $1000":"你輸了…");if(w)G.money+=1000;PB.ph="end"}
+function tryRes(){if(PB.mine&&PB.theirs)resolve()}
+function resolve(){const P=PB,H=LK.host,L=P.log,my=()=>P.my[P.a],op=()=>P.op[P.oa];RR=mul(P.seed+P.n++*7919);
+for(const sd of H?[0,1]:[1,0]){const a=sd?P.theirs:P.mine;if(a.k=="s"){if(sd)P.oa=a.i;else P.a=a.i;L.push((sd?"對手":"你")+"換上了"+nm(sd?op():my()))}}
+const sp=sd=>spd(sd?op():my()),pr=sd=>{const l=mvs(sd?op():my()),a=sd?P.theirs:P.mine;return pri(l[a.i]||l[0])},ms=[0,1].filter(sd=>(sd?P.theirs:P.mine).k=="m").sort((x,y)=>pr(y)-pr(x)||sp(y)-sp(x)||(H?x-y:y-x));
+let fi=1;for(const sd of ms){const fr=fi;fi=0;const at=sd?op():my(),df=sd?my():op(),a=sd?P.theirs:P.mine;if(at.hp<=0||df.hp<=0)continue;const l=mvs(at),v=l[a.i]||l[0];L.push(act(at,df,v));if(fr&&ACT&&at.hp>0&&df.hp>0&&!v[3]&&bz(at,df))L.push(`⚡速度優勢！${nm(at)}搶先再次出手！`,act(at,df,v))}tick(my(),L);tick(op(),L);
+RR=null;P.mine=P.theirs=null;const am=P.my.some(x=>x.hp>0),ao=P.op.some(x=>x.hp>0);
+if(!am||!ao)return endPB(am);P.rep={me:my().hp<=0,op:op().hp<=0};P.ph=P.rep.me||P.rep.op?"rep":"act"}
+function pvp(){const P=PB;if(!P)return bt("返回","go('lk')");let h=`<div class=card style="text-align:center">連線對戰<button style="float:right;margin:0;padding:2px 8px;background:#2a3350" onclick="tsnd()">${SND?"🔊":"🔇"}</button></div>`+card(P.op[P.oa])+card(P.my[P.a])+`<div class=log>${P.log.slice(-6).join("<br>")}</div>`;
+if(P.ph=="end")return h+bt("返回","PB=null;go('lk')");
+const al=P.my.map((m,i)=>[m,i]).filter(x=>x[0].hp>0&&x[1]!=P.a);
+if(P.ph=="rep")return h+(P.rep.me?al.map(x=>bt(`派出 ${nm(x[0])} Lv${x[0].L}`,`pvpRep(${x[1]})`)).join(""):"等待對方選擇下一隻…");
+if(P.mine)return h+"等待對方出招…";
+return h+mvs(P.my[P.a]).map((v,i)=>bt(ml(v),`pvpAct('m',${i})`)).join("")+`<br>`+al.map(x=>bt(`換 ${nm(x[0])}`,`pvpAct('s',${x[1]})`)).join("")+bt("投降","pvpQuit()")}
+function onMsg(m){const P=PB;
+if(m.t=="offer"){TR=TR||{mine:null,t:null,om:0,ot:0};TR.t={...m.m,hp:mh(m.m)};TR.om=TR.ot=0;M="對方提供了寶可夢交換"}
+else if(m.t=="ok"){const x=TR&&TR.mine&&G.mons[TR.mine];if(x&&TR.t&&m.theirs.id==x.id&&m.theirs.L==x.L&&m.mine.id==TR.t.id&&m.mine.L==TR.t.L){TR.ot=1;return trChk()}}
+else if(m.t=="inv"){LK.inv=1;M="對方邀請你連線對戰！（到「連線」選單回覆）"}
+else if(m.t=="no"){LK.wait=0;M="對方拒絕了對戰"}
+else if(m.t=="acc"&&LK.wait){LK.wait=0;const my=snap();send({t:"team",team:my});startPB(m.seed,my,m.team);return}
+else if(m.t=="team"&&LK.ps){const p=LK.ps;LK.ps=null;startPB(p.seed,p.my,m.team);return}
+else if(m.t=="act"&&P){if(m.a.k=="x")endPB(true);else{P.theirs=m.a;tryRes()}}
+else if(m.t=="rep"&&P){P.oa=m.i;P.rep.op=false;chk()}
+else if(m.t=="binv"){LK.binv=1;M="對方邀請你合力挑戰 Boss！（到「連線」選單回覆）"}
+else if(m.t=="bno"){LK.bwait=0;M="對方拒絕了 Boss 挑戰"}
+else if(m.t=="bacc"&&LK.bwait){LK.bwait=0;const my=snap();send({t:"bteam",team:my});startBoss(m.seed,my,m.team);return}
+else if(m.t=="bteam"&&LK.bps){const p=LK.bps;LK.bps=null;startBoss(p.seed,p.my,m.team);return}
+else if(m.t=="bact"&&BS){BS.act[BS.me^1]=m.a;bTry()}
+else if(m.t=="brep"&&BS){BS.ac[BS.me^1]=m.i;BS.rp[BS.me^1]=0;bChk()}
+if(S!="battle")draw()}
+// ===== 雙人 Boss 戰 =====
+function bossInv(){send({t:"binv"});LK.bwait=1;draw()}
+function bossAcc(y){LK.binv=0;if(!y){send({t:"bno"});return draw()}const seed=rnd(1,1e9),t=snap();LK.bps={seed,my:t};send({t:"bacc",seed,team:t});draw()}
+function startBoss(seed,my,op){PH=new WeakMap();FXQ=new WeakMap();SQ.length=0;const T=LK.host?[my,op]:[op,my],r=mul(seed^777),pk=a=>a[Math.floor(r()*a.length)],L=Math.max(...T.flat().map(x=>x.L))+50+Math.floor(r()*6),lg=r()<.3,id=lg?pk(LG.filter(i=>!LOCKALL.includes(i))):evo(pk(ALL.filter(i=>!LG.includes(i)&&!LOCKALL.includes(i))),L,1),b={id,L,foe:1,bm:1.5,dm:.6,bs:r()<.1?1:0};b.dl=L;b.L=L+40;b.hp=mh(b);BS={seed,me:LK.host?0:1,T:T.map(t=>t.map(x=>({...x}))),ac:[0,0],act:[null,null],rp:[0,0],b,n:0,log:["Boss出現了！無法逃脫！"],ph:"act",bl:5};autoP();go("boss")}
+function bAlive(s){return BS.T[s].some(x=>x.hp>0)}
+function autoP(){const s=BS.me;if(!BS.act[s]&&!bAlive(s)){BS.act[s]={k:"p"};send({t:"bact",a:BS.act[s]});bTry()}}
+function bossAct(k,i){if(BS.act[BS.me]||BS.ph!="act")return;BS.act[BS.me]={k,i};send({t:"bact",a:BS.act[BS.me]});bTry();draw()}
+function bTry(){if(BS.act[0]&&BS.act[1])bRes()}
+function bossRep(i){if(!BS.rp[BS.me])return;BS.ac[BS.me]=i;BS.rp[BS.me]=0;send({t:"brep",i});bChk();draw()}
+function bChk(){if(!BS.rp[0]&&!BS.rp[1]){BS.ph="act";autoP()}}
+function bRes(){const Z=BS,L=Z.log,b=Z.b,A=Z.act,mon=s=>Z.T[s][Z.ac[s]];RR=mul(Z.seed+(++Z.n)*7919);
+for(const s of[0,1])if(A[s].k=="s"){Z.ac[s]=A[s].i;L.push((s==Z.me?"你":"隊友")+"換上了"+nm(mon(s)))}
+for(const s of[0,1].filter(s=>A[s].k=="m").sort((x,y)=>spd(mon(y))-spd(mon(x))||x-y)){const at=mon(s),l=mvs(at);if(at.hp<=0||b.hp<=0)continue;L.push(act(at,b,l[A[s].i]||l[0]))}
+if(b.hp>0){let ok=1;if(b.st=="slp"){if(b.sl>0){b.sl--;L.push("Boss正在熟睡…");ok=0}else{b.st=0;L.push("Boss醒來了！")}}if(ok&&b.st=="par"&&RN()<.25){L.push("Boss麻痺了，動不了！");ok=0}
+if(ok){const l=mvs(b).filter(v=>!v[3]),mv=l[Math.floor(RN()*l.length)];for(const s of[0,1]){const d=mon(s);if(d.hp>0)L.push(hit(b,d,mv))}}}
+for(const s of[0,1])tick(mon(s),L);tick(b,L);RR=null;A[0]=A[1]=null;
+if(b.hp<=0)return bEnd(1);if(!bAlive(0)||!bAlive(1))return bEnd(0);
+Z.rp=[0,1].map(s=>mon(s).hp<=0&&bAlive(s)?1:0);Z.ph=Z.rp[0]||Z.rp[1]?"rep":"act";if(Z.ph=="act")autoP()}
+function bEnd(w){const Z=BS;Z.ph="end";if(w){cnt("boss");const g=Math.min(Z.b.L,300)*150;G.money+=g;G.items.c+=2;if([643,644,646].includes(Z.b.id)){G.cr=(G.cr||0)+1;Z.log.push("獲得結合晶體！")}G.dex[Z.b.id]=G.dex[Z.b.id]||1;Z.b.s=Z.b.bs;Z.log.push(`Boss被打倒了！獲得 $${g} 與神奇糖果 x2`);Z.ph="cap"}else Z.log.push("有一方的隊伍全滅了…挑戰失敗（不影響你的寶可夢）")}
+function bossBall(mast){const Z=BS;if(Z.ph!="cap"||(!mast&&Z.bl<1)||(mast&&G.balls.m<1))return;if(mast)G.balls.m--;else Z.bl--;Z.mc=0;if(mast||Math.random()<.07){const b=Z.b,av=Math.floor(G.team.reduce((a,u)=>a+G.mons[u].L,0)/G.team.length),m=newMon(b.id,Math.max(1,Math.min(LM,av+rnd(-10,10))),b.s),t=G.team.length<cap();if(t)G.team.push(m.u);cnt("cap");Z.log.push(`捕捉成功！${N[b.id-1]}${b.s?"（色違）✨":""} Lv${m.L}（${t?"加入隊伍":"送到寄放區"}）`);Z.ph="end"}else{Z.log.push(`紀念球被掙脫了！剩下 ${Z.bl} 顆`);if(Z.bl<1){Z.log.push("紀念球用完了，Boss逃走了…");Z.ph="end"}}draw()}
+function boss(){const Z=BS;if(!Z)return bt("返回","go('lk')");const me=Z.me,mon=s=>Z.T[s][Z.ac[s]],b=Z.b;
+let h=`<div class=card style="text-align:center">雙人 Boss 戰（無法逃脫）　Boss Lv${b.dl||b.L}<button style="float:right;margin:0;padding:2px 8px;background:#2a3350" onclick="tsnd()">${SND?"🔊":"🔇"}</button></div>`+card(b)+`<div class=card><b>隊友</b></div>`+card(mon(me^1))+`<div class=card><b>你</b></div>`+card(mon(me))+`<div class=log>${Z.log.slice(-8).join("<br>")}</div>`;
+if(Z.ph=="cap")return h+(Z.mc?`<div class=card>確認使用大師球？（剩 ${G.balls.m} 顆）</div>`+bt("確認","BS.mc=0;bossBall(1)")+bt("取消","BS.mc=0;draw()"):`<div class=card>🎯 捕捉階段：紀念球 x${Z.bl}，每顆 7% 機率<br><small>捕獲後等級會落在你隊伍平均等級上下10級</small></div>`+bt(`丟紀念球（剩 ${Z.bl}）`,"bossBall()",Z.bl<1)+bt(`使用大師球（x${G.balls.m}）`,"BS.mc=1;draw()",!G.balls.m)+bt("放棄捕捉","BS.ph='end';draw()"));
+if(Z.ph=="end")return h+bt("返回","BS=null;go('lk')");
+if(!bAlive(me))return h+"你的隊伍已全滅，等待隊友結束戰鬥…";
+const al=Z.T[me].map((m,i)=>[m,i]).filter(x=>x[0].hp>0&&x[1]!=Z.ac[me]);
+if(Z.ph=="rep")return h+(Z.rp[me]?al.map(x=>bt(`派出 ${nm(x[0])} Lv${x[0].L}`,`bossRep(${x[1]})`)).join(""):"等待隊友選擇下一隻…");
+if(Z.act[me])return h+"等待隊友出招…";
+return h+mvs(mon(me)).map((v,i)=>bt(ml(v),`bossAct('m',${i})`)).join("")+`<br>`+al.map(x=>bt(`換 ${nm(x[0])}`,`bossAct('s',${x[1]})`)).join("")}
+function heal(){Object.values(G.mons).forEach(m=>{m.hp=mh(m);m.pp={}});M="所有寶可夢（含寄放區）已完全恢復！";go("home")}
+function areas(){const st=stTxt();return`<h3>選擇地點</h3><div class=card>${st}<br><small>野外對戰每場消耗 1 點體力，每 10 分鐘恢復 1 點。可到商店買體力藥水或擴充上限。</small></div>`+AR.map((a,i)=>bt(a[0],`wild(${i})`,G.sta<1)).join("")+`<div class=card><b>深淵</b><br>深淵碎片 ${G.items.sd}/6　入場券 ${G.items.tk}<br><small>戰勝暗影對手可得碎片；6片合成1張入場券，可挑戰深淵君主（6隻暗影寶可夢，最後一隻是傳說）。每張入場券有2次挑戰機會：獲勝就直接用掉，失敗（含認輸）只扣1次機會，剩下的機會可繼續挑戰。</small></div>`+bt("合成入場券（6片）","craft()",G.items.sd<6)+bt(G.abc>0?`繼續挑戰深淵君主（本張入場券剩 ${G.abc} 次機會）`:"挑戰深淵君主（-1張，可挑戰2次）","abyssFight()",!(G.abc>0)&&G.items.tk<1)+`<br>`+bt("返回","go('home')")}
+const avgL=()=>Math.round(G.team.reduce((s,u)=>s+G.mons[u].L,0)/G.team.length);
+function wildFoe(i){const a=AR[i],pool=ALL.filter(id=>!a[1]||ty(id).some(t=>a[1].includes(t))),L=Math.min(LM,Math.max(2,avgL()+(Math.random()<.05?(Math.random()<.7?1:-1)*rnd(11,18):rnd(-3,2)))),id=evo(pick(pool,a[1]?wt:x=>LG.includes(x)?3:wt(x)),L);const f=mk(id,L);bst(f,1);return f}
+function wild(i){stm();if(G.sta<1){M="體力不足！請等體力恢復，或到商店購買體力藥水。";return go("areas")}start("wild",[wildFoe(i)],"")}
+function trainer(){if(!G.team.length)return;const top=topL(),n=rnd(1,3),f=[];for(let i=0;i<n;i++){const L=Math.max(2,top+rnd(-3,1));const x=mk(evo(pick(ALL),L),L);bst(x,0);f.push(x)}start("trainer",f,TN[rnd(0,5)])}
+function gymFight(){const gt=G.round%18;let pool=ALL.filter(id=>ty(id).includes(gt));if(!pool.length)pool=ALL;const b=gl();start("gym",[-3,0,3].map(d=>{const L=Math.max(1,Math.min(LM,b+d));return mk(evo(pick(pool),L),L)}),`${TY[gt]}系館主`)}
+// 道館
+const xg=u=>{const m=G.mons[u];return m.L>=LM?0:Math.floor(Math.min(480,(Date.now()-G.gym[u])/60000)/60*need(m.L)/10)};
+const inc=u=>Math.floor(Math.min(480,(Date.now()-G.gym[u])/60000)*Math.max(1,G.mons[u].L/2)*(G.mons[u].s?2:1)*.75);
+function gym(){const ps=Object.keys(G.gym),tot=ps.reduce((s,u)=>s+inc(u),0);
+return`<h3>道館（第${Math.floor(G.round/18)+1}循環・第${G.round%18+1}/18座）</h3><div class=card>館主三隻寶可夢，平均 Lv${gl()}，屬性：${TY[G.round%18]}（每通關一輪 +10 級）<br>隊伍上限 ${cap()} 隻（每通關5輪 +1，最多6隻）<br>`+bt("挑戰道館","gymFight()")+`</div><div class=card><b>放置賺錢</b>（最多派駐3隻、最多累積8小時，另外每小時獲得約 1/10 級所需經驗（至少約10小時升1級，等級越高經驗越多）；每隻每分鐘約 Lv×0.375 元；色違收益加倍，還可能帶回神奇糖果）<br>`+(ps.length?ps.map(u=>`${nm(G.mons[u])} Lv${G.mons[u].L}：$${inc(u)}＋EXP ${xg(u)}`).join("<br>"):"尚無放置的寶可夢（到「隊伍／寄放」放置）")+`<br>`+bt(`領取 $${tot}`,"collect()",!tot)+bt("領取並全部收回","collect(1)",!ps.length)+`</div>`+bt("返回","go('home')")}
+function collect(r){cnt("col");let t=0,c=0;const lv=[];for(const u in G.gym){t+=inc(u);const x=xg(u);if(x>0)addXp(G.mons[u],x,lv);if(G.mons[u].s&&Math.random()<Math.min(.8,(Date.now()-G.gym[u])/6e6)*(maxL()>50?.2:1))c++;G.gym[u]=Date.now()}if(r)G.gym={};G.money+=t;G.items.c+=c;M=(r?"已全部收回。":"")+`領取 $${t}`+(c?`，色違寶可夢帶回神奇糖果 x${c}！`:"")+(lv.length?"<br>"+lv.join("<br>"):"");go("gym")}
+// 隊伍／寄放
+function box(){const T=u=>G.team.includes(u),LS=boxList(T);
+return`<h3>隊伍（${G.team.length}/${cap()}）／寄放區</h3>`+bt("返回","go('home')")+boxCtl()+LS.map(m=>{const t=T(m.u),p=G.gym[m.u];
+return card(m,(t?"<small>出戰隊伍 </small>"+bt("寄放",`toBox(${m.u})`):p?"<small>放置中 </small>"+bt("收回",`unplace(${m.u})`):bt("加入隊伍",`toTeam(${m.u})`,G.team.length>=cap())+bt("放置道館",`place(${m.u})`,Object.keys(G.gym).length>=3))+bt("神奇糖果",`candy(${m.u})`,!G.items.c||m.L>=LM)+bt("訓練 $150",`train(${m.u})`,G.money<150||m.L>=LM)+(EV[m.id]&&m.L>=EV[m.id]&&!LOCK(m.id+1)?bt("進化！",`evolve(${m.u})`):"")+fmBtns(m)+bt("賣出",`sell(${m.u})`,t||!!p))}).join("")+(BX.more?bt(`顯示更多（還有${BX.more}隻）`,"BX.n+=30;draw()"):"")}
+const cnt=(k,n)=>{G.sx=G.sx||{};G.sx[k]=(G.sx[k]||0)+(n||1)},
+DQ=[["wild","野外對戰勝利",3,8],["tr","訓練家對戰勝利",2,5],["gym","挑戰道館勝利",1,3],["cap","捕捉寶可夢",1,3],["roll","抽寶可夢",2,6],["col","領取道館放置收益",1,2],["use","使用道具",2,5],["train","訓練寶可夢",1,3]],
+LT=[["wild","野外對戰勝利",()=>(G.sx||{}).wild||0,[30,100,300,1000,3000]],["tr","訓練家對戰勝利",()=>(G.sx||{}).tr||0,[20,60,200,600]],["gym","道館勝利",()=>(G.sx||{}).gym||0,[5,18,36,72]],["dex","圖鑑捕獲數",()=>Object.values(G.dex).filter(v=>v==2).length,[20,50,100,200,400,898]],["lv","最高等級",()=>maxL(),[50,100,150,200,300,400]],["shiny","色違圖鑑",()=>Object.keys(G.dsx||{}).length,[1,5,20,50]],["shd","暗影圖鑑",()=>Object.keys(G.dsh||{}).length,[1,5,20,50]],["boss","雙人Boss勝利",()=>(G.sx||{}).boss||0,[1,5,20]],["roll","抽獎次數",()=>(G.sx||{}).roll||0,[10,100,500,2000]],["ab","擊敗深淵君主",()=>(G.sx||{}).ab||0,[1,5,20]]],
+qDay=()=>{const d=new Date();return d.getFullYear()+"-"+(d.getMonth()+1)+"-"+d.getDate()},
+ltR=(i,n)=>({m:3000*(i+1)*(i+1),c:i+1,g:i+1,sd:i>=2?1:0,mb:i==n-1&&n>=4?1:0}),
+ltT=r=>`$${r.m}＋神奇糖果x${r.c}＋抽獎券x${r.g}`+(r.sd?"＋深淵碎片x1":"")+(r.mb?"＋大師球x1":"");
+const rwT=x=>x.t=="m"?`$${x.v}`:`${x.n}x${x.v}`;
+function dq(){if(G.q&&G.q.day==qDay()&&G.q.v==2)return;G.sx=G.sx||{};const r=mul([...qDay()].reduce((h,c)=>(h*31+c.charCodeAt(0))>>>0,7)),ix=DQ.map((_,i)=>i),O=[{t:"m",v:Math.floor((1000+80*avgL())/2)},{t:"i",k:"b",v:5,n:"寶貝球"},{t:"i",k:"g",v:2,n:"超級球"},{t:"i",k:"p",v:3,n:"傷藥"},{t:"i",k:"q",v:2,n:"好傷藥"}];for(let i=ix.length-1;i>0;i--){const j=Math.floor(r()*(i+1));[ix[i],ix[j]]=[ix[j],ix[i]]}const ids=ix.slice(0,3);G.q={v:2,day:qDay(),ids,tg:ids.map(i=>DQ[i][2]+Math.floor(r()*(DQ[i][3]-DQ[i][2]+1))),rw:ids.map(()=>O[Math.floor(r()*O.length)]),base:{...G.sx},cl:[0,0,0]}}
+const qCur=i=>{const k=DQ[G.q.ids[i]][0];return Math.min(G.q.tg[i],((G.sx||{})[k]||0)-(G.q.base[k]||0))};
+function qd(i){dq();if(G.q.cl[i]||qCur(i)<G.q.tg[i])return;const x=G.q.rw[i];G.q.cl[i]=1;if(x.t=="m")G.money+=x.v;else(G.balls[x.k]!==undefined?G.balls:G.items)[x.k]+=x.v;G.items.gt=(G.items.gt||0)+1;let e="";if(G.q.cl.every(c=>c)){G.items.gt+=5;e="　三項任務全部完成，額外獲得抽獎券 x5！"}M=`領取 ${rwT(x)}＋抽獎券 x1`+e;draw()}
+function ql(k){const s=LT.find(x=>x[0]==k),n=(G.lc=G.lc||{})[k]||0;if(n>=s[3].length||s[2]()<s[3][n])return;const r=ltR(n,s[3].length);G.lc[k]=n+1;G.money+=r.m;G.items.c+=r.c;G.items.gt=(G.items.gt||0)+r.g;G.items.sd+=r.sd;G.balls.m+=r.mb;M=`${s[1]}達成！獲得 ${ltT(r)}`;draw()}
+const qBadge=()=>{dq();let n=fqOn()&&G.fq.done&&!G.fq.cl?1:0;G.q.ids.forEach((_,i)=>{if(!G.q.cl[i]&&qCur(i)>=G.q.tg[i])n++});LT.forEach(s=>{const k=(G.lc||{})[s[0]]||0;if(k<s[3].length&&s[2]()>=s[3][k])n++});return n?`（${n}）`:""};
+function quests(){dq();let h=`<h3>任務</h3>`+bt("返回","go('home')")+`<div class=card><b>每日任務</b>（每天重置）<br><small>每完成（領取）一個任務 +1 張抽獎券；三個全部完成再額外 +5 張。目前抽獎券 ${G.items.gt||0} 張</small></div>`;
+G.q.ids.forEach((qi,i)=>{h+=`<div class=card>${DQ[qi][1]}　${qCur(i)}/${G.q.tg[i]}<br><small>獎勵：${rwT(G.q.rw[i])}＋抽獎券x1</small><br>`+(G.q.cl[i]?"✔ 已領取":bt("領取",`qd(${i})`,qCur(i)<G.q.tg[i]))+`</div>`});
+h+=`<div class=card><b>長期任務</b></div>`;
+LT.forEach(s=>{const n=(G.lc||{})[s[0]]||0;h+=`<div class=card>${s[1]}　`+(n>=s[3].length?"✔ 全部完成":`目標 ${s[3][n]}（${Math.min(s[2](),s[3][n])}/${s[3][n]}）<br><small>獎勵：${ltT(ltR(n,s[3].length))}</small><br>`+bt("領取",`ql('${s[0]}')`,s[2]()<s[3][n]))+`</div>`});h+=fqCard();return h}
+const LOCKALL=[250,282,448,892],sdn=k=>!!(G.st&&G.st[k]&&G.st[k].d),LOCK=id=>(id==892&&!sdn("s1"))||(id==250&&!sdn("s2"))||(id==282&&!sdn("s3"))||(id==448&&!sdn("s4")),
+hasId=id=>Object.values(G.mons).some(m=>m.id==id),healAll=()=>Object.values(G.mons).forEach(m=>{m.hp=mh(m);m.pp={}}),
+sf=(id,L,o)=>{const x=mk(id,Math.max(2,L));Object.assign(x,o||{});x.hp=mh(x);return x},
+wl=()=>Math.min(LM,Math.max(2,avgL()+(Math.random()<.05?(Math.random()<.7?1:-1)*rnd(11,18):rnd(-3,2)))),
+wf=(id,o)=>{const f=mk(id,wl());Object.assign(f,o||{});bst(f,1);return f},
+byT=(ts,n,o)=>Array.from({length:n},()=>{const L=wl(),f=mk(evo(pick(ALL.filter(x=>!LG.includes(x)&&ty(x).some(y=>ts.includes(y)))),L),L);Object.assign(f,o||{});bst(f,1);return f}),
+top3=ex=>{const l=Object.values(G.mons).filter(m=>m.u!=ex).map(m=>m.L).sort((a,b)=>b-a).slice(0,3);return Math.max(1,Math.round(l.reduce((a,b)=>a+b,0)/Math.max(1,l.length)))},
+mine=id=>Object.values(G.mons).filter(m=>m.id==id).sort((a,b)=>a.L-b.L)[0],
+m0=()=>G.m0&&G.mons[G.m0]?G.m0:Math.min(...Object.keys(G.mons).map(Number)),
+fqOn=()=>{if(maxL()>=130&&!G.fq)G.fq={on:1,done:0,cl:0};return G.fq&&G.fq.on},
+OPP=[[66,1],[106,10],[107,20],[237,30],[297,40],[448,50],[68,60],[214,70]];
+function fqHook(){if(!fqOn()||G.fq.done||B.act!=m0())return;const m=G.mons[B.act];if(m&&m.L>=50){G.fq.done=1;G.items.fw=1;B.log.push("獲得道具「鳳王之羽」！（不會被消耗）")}}
+function fqCard(){if(!fqOn())return"";const m=G.mons[m0()];return`<div class=card><b>霓光飛鴻・序章</b><br>把初始角色（${m?nm(m)+" Lv"+m.L:"—"}）升到50級，然後用牠上場對戰並獲勝。<br>`+(G.fq.cl?"✔ 已領取":G.fq.done?`<small>獎勵：$50000</small><br>`+bt("領取","fqClaim()"):"進行中")+`</div>`}
+function fqClaim(){if(!G.fq||!G.fq.done||G.fq.cl)return;G.fq.cl=1;G.money+=50000;M="領取 $50000。鳳王之羽已在你手中，到「支線」開啟「霓光飛鴻」。";draw()}
+function awake(m){m.id=448;m.ab=1;m.L=Math.min(LM,top3(m.u));m.xp=0;m.hp=mh(m);m.pp={};G.dex[448]=2}
+function evoPick(c){const me=G.mons[B.act];me.id=892;me.fm=FM.findIndex(f=>f.n==(c==1?"一擊流武道熊師":"連擊流武道熊師"))+1;me.hp=mh(me);me.pp={};B.fin=3;B.menu="m";G.dex[892]=2;B.log.push(`${nm(me)}誕生了！體力完全恢復！`+(c==1?"一擊流：暗冥強襲拳將一擊決勝負！":"連擊流：水流連打每一下都有機會連擊！"));draw()}
+const BN=["休息室裡，熊徒弟一直在原地練習出拳，空氣被劈得呼呼作響。|你：「第一場，不用急著表現，穩穩地打就好。」|熊徒弟用力點頭，卻又忍不住多打了十幾拳。|廣播：「第一輪即將開始，請選手入場！」", "通往場地的走廊上，一位頭戴頭巾的老選手叫住了你們。|老選手：「第一場贏了？不錯。不過，後面的對手可不會讓你這麼輕鬆。」|「記住，格鬥靠的不是力氣，是呼吸。」|熊徒弟模仿著老選手的呼吸節奏，吸氣、吐氣，一臉認真。", "休息區裡，一位少女遞來一瓶運動飲料：「我是上一輪被你打敗的選手。你們的拳頭很誠實，我很喜歡。」|你：「謝謝，不過……我們還沒贏到最後呢。」|少女笑著說：「那就更要贏到最後，替我們這些輸掉的人看到更遠的風景。」|熊徒弟接過飲料，鄭重地鞠了一躬。", "觀眾席漸漸坐滿了人，歡呼聲一陣高過一陣。|你：「已經打到第四輪了呢……你怕嗎？」|熊徒弟搖搖頭，指了指自己的拳頭，又指了指你，意思是：『有你在，我不怕。』|你被牠逗笑了：「那就上吧！」", "賽前的訓練場上，熊徒弟對著沙袋出拳，一下、兩下、三下……沙袋忽然「砰」的一聲飛了出去。|旁邊的選手們全都停下動作，瞪大了眼睛。|你：「呃……牠最近有點太有精神了。」|博士從遠處走來：「不要小看牠的成長——牠每打一場，拳頭就更重一分。」", "夜裡，你和熊徒弟坐在競技場外的石階上，看著遠處的燈火。|你：「還記得第一天來報名的時候嗎？你只有 1 級，連沙袋都打不動。」|熊徒弟低頭看了看自己的拳頭，輕輕笑了一下。|你：「不管明天輸贏，你都已經比當初強太多了。」", "有人在休息室門口等你們。是一位身穿道服、鬍子花白的老人。|老人：「我是武林大會的創辦人。你的熊徒弟……讓我想起年輕時的自己。」|「大會的最後，會有一個『不守規矩』的對手等著你們。到時候，請你們不要放棄。」|你和熊徒弟對視一眼，雖然聽不太懂，卻都用力點了點頭。", "前面的路都走過了，下一場就是決賽之前的最後一場。|場邊的記者蜂擁而上：「請問你們有什麼感想？」|你：「感想嘛……就是，我們還想繼續往前。」|熊徒弟在鏡頭前擺出了一個超帥的姿勢，記者們全都愣住了。|廣播：「接下來，進入最後一場正賽——」"];
+const S1=[
+{k:"say",t:"博士：「大事了！武林大會即將在山腳的競技場舉行，各地的格鬥好手都會參加！」|你身旁的熊徒弟一聽到消息，眼睛瞬間亮了起來，不停地原地揮拳。|博士：「看來牠已經迫不及待了。……你願意帶牠去參加嗎？」"},
+{k:"say",t:"博士從抽屜裡拿出一張泛黃的傳單，上面畫著一隻揮拳的熊。|博士：「武林大會每五年舉辦一次，歷屆冠軍都被刻在競技場正門的石碑上。」|「那些名字裡，有人從無名小卒一路打上來，也有人一戰成名後就消失在江湖。」|熊徒弟盯著傳單，雙眼閃閃發光，連呼吸都急促了起來。"},
+{k:"say",t:"你蹲下來，看著熊徒弟的眼睛：「你真的想去嗎？可能會輸，也可能會受傷。」|熊徒弟沒有說話，只是把右拳舉到胸前，重重地敲了一下自己的胸口。|博士：「這是格鬥家的誓言——不論輸贏，絕不逃避。」|你：「……好，那我們一起去。」"},
+{k:"say",t:"報名處的大叔：「規定只有一條——只准熊徒弟本身上場，一對一單打，而且所有參賽者都要從頭開始，等級歸 1。」|熊徒弟毫不猶豫地點了點頭。|大叔：「好！一共九輪淘汰賽，輸了可以重新挑戰。祝你們好運！」",fx:()=>{const k=mine(891);G.st.s1.u=k.u;k.L=1;k.xp=0;k.hp=mh(k);k.pp={}}},
+{k:"say",t:"報名完畢，你們在競技場外圍的廣場上走了一圈。四處都是來自各地的格鬥好手：有人在樹下打坐，有人對著瀑布揮拳，還有人把巨大的岩石扛在肩上做深蹲。|熊徒弟一邊走，一邊睜大眼睛打量每一個人，肩膀不自覺地縮了一點。|你：「怎麼了？被嚇到了？」|熊徒弟搖搖頭，又用力挺直了背脊。"},
+{k:"say",t:"廣場角落，一位賣便當的阿姨叫住你：「小朋友，第一次參賽吧？來，這個『必勝便當』送你，吃飽了才有力氣。」|你：「謝謝阿姨！不過……『必勝』只是名字吧？」|阿姨：「對呀，只是名字。不過，我賣了二十年，吃過的選手，每個人都至少贏了一場。」|熊徒弟已經用雙手抱著便當，吃得滿臉都是飯粒。"},
+{k:"say",t:"夜晚，你們在選手宿舍的通鋪睡下。隔壁房間傳來此起彼落的鼾聲，還有人在說夢話：「再來一拳……」|熊徒弟翻來覆去睡不著，最後爬起來，坐在窗邊看月亮。|你悄悄走到牠身邊坐下：「睡不著？」|牠指了指自己的拳頭，又指了指明天的方向。|你：「我知道。我也很期待。睡吧，明天就是第一場了。」"},
+...OPP.flatMap(([id,L],i)=>[
+{k:"say",t:()=>`第 ${i+1} 輪／共 9 輪|對手：${N[id-1]}（Lv${L}）|你的熊徒弟目前 Lv${G.mons[G.st.s1.u].L}。|規則：贏了之後，若熊徒弟等級高於對手則維持，低於對手則成為對手的等級。`},
+{k:"say",t:BN[i]},
+{k:"fight",solo:()=>G.st.s1.u,f:()=>[sf(id,Math.max(1,L-3),{bm:1,dm:1})],m:`第${i+1}輪・預賽`,after:()=>{const k=G.mons[G.st.s1.u];k.hp=mh(k);k.pp={}}},
+{k:"say",t:`預賽結束，主將上場！|裁判：「接下來是第 ${i+1} 輪的正賽，雙方準備！」`},
+{k:"fight",solo:()=>G.st.s1.u,f:()=>[sf(id,L,{bm:1,dm:1})],m:`第${i+1}輪對手`,after:()=>{const k=G.mons[G.st.s1.u];if(k.L<L){k.L=L;k.xp=0}k.hp=mh(k);k.pp={}}}]),
+{k:"say",t:"九輪之中的第八場，在眾人屏息的注視下結束了。熊徒弟喘著大氣，汗水沿著下巴滴落，卻依然站得筆直。|觀眾席爆出如雷的掌聲，有人高喊著牠的名字，有人揮舞著手巾。|你：「我們……已經打進決賽了。」|熊徒弟轉頭看你，眼眶竟微微泛紅。"},
+{k:"say",t:"回到休息室，博士已經在那裡等著。他的神情，卻比平常嚴肅許多。|博士：「有件事我必須先告訴你們。決賽的對手……不太一樣。」|你：「不太一樣？是更強的選手嗎？」|博士沉默了一會兒：「是『規則之外』的存在。主辦單位臨時換掉了決賽選手。」|「我也是剛剛才聽說的。」"},
+{k:"say",t:"熊徒弟聽完，沒有害怕，反而慢慢站起身，用雙手拍了拍自己的臉頰。|你：「你真的要上嗎？就算對手不公平？」|牠點頭，用力一指競技場的方向。|博士輕輕嘆了口氣：「……也許，這就是格鬥家吧。」|你：「那我就站在場邊，看你打到最後。」|廣播聲響起：「決賽，即將開始！」"},
+{k:"say",t:"決賽！|場邊廣播：「決賽對手——幻之寶可夢 凱路迪歐，Lv80！」|觀眾：「這不公平吧！熊徒弟才 Lv70 耶！」「凱路迪歐根本是犯規等級！」|裁判：「……規則就是規則，決賽照常進行！」"},
+{k:"fight",solo:()=>G.st.s1.u,fin:1,f:()=>[sf(647,80,{ko:1,bm:1,dm:1})],m:"決賽・凱路迪歐",after:()=>{const k=G.mons[G.st.s1.u];k.L=Math.min(LM,top3(k.u));k.xp=0;k.hp=mh(k);k.pp={}}},
+{k:"say",t:"凱路迪歐倒下的那一瞬間，整個競技場像是靜止了。|然後——掌聲、歡呼、哭聲同時爆發，連地面都在微微顫動。|觀眾們站起身，高喊著熊徒弟的名字。有人把帽子拋向天空，有人緊緊抱住身旁的陌生人。|你站在場邊，雙腿發軟，眼眶發熱。"},
+{k:"say",t:"對手席上，凱路迪歐緩緩站起，朝熊徒弟點了點頭，化作一道藍光消失了。|廣播：「凱路迪歐……選擇了離場。這場比賽，勝者無庸置疑！」|熊徒弟轉過身，朝你這邊揮了揮手，臉上掛著笑。|你高高舉起雙手，用盡全力喊了一聲：「你是最棒的！」"},
+{k:"say",t:()=>`全場歡聲雷動！|裁判高舉你的手：「優勝者——${nm(G.mons[G.st.s1.u])}！」|博士：「太了不起了！牠在最危急的時刻，靠著大家的聲援突破了極限，進化了！」|${nm(G.mons[G.st.s1.u])}挺起胸膛，對你重重地點了點頭。（等級成為你最強前三名寶可夢的平均：Lv${G.mons[G.st.s1.u].L}）|獲得優勝獎金 $100000！`,fx:()=>{G.money+=100000;M="支線「武人的驕傲」完成！武道熊師已解除限定。"}}];
+const S2=[
+{k:"say",t:"入夜後，包包裡的鳳王之羽忽然散發出七彩的光芒，像是在呼喚著什麼。|羽毛的光芒指向遙遠的東方——那座傳說中的鈴鐺塔。|你決定循著光芒出發。"},
+{k:"say",t:"一路上，羽毛的光芒時明時暗，像是在回應你的腳步。|旅途中經過一座沉睡的小鎮，鎮上的居民看見羽毛，紛紛放下手邊的工作，對你遠遠地鞠躬。|一位老婆婆悄悄塞給你一包糰子：「這是給旅人的。願彩虹一路指引你。」|你：「彩虹……？」老婆婆只是微笑，不再多說。"},
+{k:"say",t:"夜裡，你在山腳紮營。篝火旁，你把羽毛捧在掌心端詳。|羽毛上的七彩紋路，像是一道封印的符文，在火光下緩緩流動。|你的夥伴們圍坐在身邊，有的打盹，有的好奇地盯著羽毛。|你：「到底，是什麼在呼喚我們呢……」|遠處的山頭上，一座高塔的輪廓，若隱若現。"},
+{k:"say",t:"第三天清晨，你終於站在鈴鐺塔的山門前。|山風送來清脆的鈴聲，一聲、兩聲、三聲，像是在歡迎，也像是在試探。|石階蜿蜒而上，兩旁的石燈籠一座座點亮，彷彿專為你而燃。|你深吸一口氣，邁出第一步。"},
+{k:"say",t:"鈴鐺塔矗立在雲霧之中。塔門前，一位拄著拐杖的老人早已等候多時。|老人：「那光……是鳳王之羽！上一次看見它發光，已是百年前的事了。」|「年輕人，鳳王不會輕易現身。想見牠，必須先通過守塔的三道試煉。」|「第一道，是『烈焰之試』——證明你的隊伍不怕火焰。」"},
+{k:"say",t:"老人領你走進塔底的火之殿。四周的牆壁燃燒著永不熄滅的火焰，熱浪撲面而來。|老人：「烈焰之試，考驗的不是能不能打贏，而是能不能在火焰中保持冷靜。」|「守衛們共有兩批。第一批是『灼熱的衛兵』，第二批，是『守衛長』率領的精銳。」|你：「也就是說，要連戰兩場？」|老人：「正是。」"},
+{k:"fight",f:()=>byT([1],4),m:"灼熱的衛兵",rw:()=>avgL()*150},
+{k:"say",t:"火焰衛兵倒下後，殿中央的大鼎突然噴出一道火柱。|老人：「第一批通過了。但守衛長不會因為同伴倒下就手軟。」|你的夥伴們身上都沾著煙灰，卻沒有一個人退縮。|你：「再來！」"},
+{k:"fight",f:()=>byT([1],5),m:"烈焰守衛長",rw:()=>avgL()*300},
+{k:"say",t:"老人：「好！第一道試煉通過。」|正當你準備登塔時，塔外傳來雜亂的腳步聲——幾個黑衣人衝了進來。|黑衣人：「那根羽毛，交出來！我們要用它喚醒鳳王，獻給首領大人！」|老人：「小心，他們是衝著鳳王之羽來的！」"},
+{k:"fight",f:()=>byT([15],4),m:"黑衣人",rw:()=>avgL()*200},
+{k:"say",t:"最後一名黑衣人跪倒在地，卻忽然獰笑：「你以為這樣就結束了？首領大人早就料到了——」|他吹響口哨，塔外湧入更多披著黑斗篷的身影，為首的人，周身繚繞著不祥的黑霧。|老人：「是暗影的氣息！小心別被黑霧碰到！」"},
+{k:"fight",f:()=>byT([15,13],5,{sh:1}),m:"黑衣首領與暗影部隊",rw:()=>avgL()*350},
+{k:"say",t:"黑衣人落荒而逃，掉下了一張紙條：「……暗影的力量，將在鳳王身上覺醒……」|老人臉色凝重：「他們想利用鳳王的力量。我們必須搶在他們之前抵達塔頂。」|「第二道試煉，是『天空之試』。塔頂風勢強勁，只有真正能飛翔的寶可夢才站得穩。」"},
+{k:"say",t:"塔身越來越高，風也越來越強。|你抓著欄杆，一步一步往上爬，衣角被吹得啪啪作響。|老人在前方回頭喊道：「不要往下看！塔外的風，可以把人吹出去！」|你：「這、這種高度，我的夥伴們撐得住嗎？」|你回頭，夥伴們卻一個比一個興奮——牠們似乎很享受這陣風。"},
+{k:"fight",f:()=>byT([9],4),m:"天空守衛",rw:()=>avgL()*200},
+{k:"say",t:"第一波天空守衛被擊退，雲層中卻傳來更尖銳的鳴叫。|一群羽翼如刀的飛行寶可夢，從更高的塔頂俯衝而下。|老人：「是守塔長老的親衛隊！把牠們也打敗，塔頂就在眼前了。」"},
+{k:"fight",f:()=>byT([9],5),m:"天空長老親衛隊",rw:()=>avgL()*400},
+{k:"say",t:"你一步一步登上塔頂。雲層裂開，雨滴灑落。|遠方的天空出現了一道巨大的彩虹，七彩的光輝照在鳳王之羽上，羽毛輕輕地浮了起來。|老人：「第三道試煉，是『聖獸之試』。傳說三聖獸為了守護鳳王而復活，只有牠們認可的人，才能見到鳳王。」|雲間傳來雷鳴、烈焰與水聲——三道身影在雲層後若隱若現。"},
+{k:"say",t:"三道身影並未一起行動。最先降下的，是一團籠罩著雷電的影子。|雷鳴震耳欲聾，一頭黃色的野獸踏著閃電，緩緩現身。|老人：「雷公……牠先來考驗你。」"},
+{k:"fight",f:()=>[wf(243)],m:"雷公",rw:()=>avgL()*200},
+{k:"say",t:"雷聲漸遠，空氣中卻傳來灼人的熱度。|烈焰從雲層深處噴湧而出，一頭火焰之獸踏著赤色的光輝降臨。|老人：「炎帝……牠要看的，是你面對火焰時的決心。」"},
+{k:"fight",f:()=>[wf(244)],m:"炎帝",rw:()=>avgL()*200},
+{k:"say",t:"火光漸息，這次，是細密的水氣包住了塔頂。|一頭蒼藍的身影立在雨幕之中，眼神安靜卻凌厲。|老人：「水君……最後一位，也是最沉穩的考官。」"},
+{k:"fight",f:()=>[wf(245)],m:"水君",rw:()=>avgL()*200},
+{k:"say",t:"三聖獸各自退到一旁，站成一個三角形，彼此對望了一眼。|忽然，三道光芒同時衝向天空——|老人：「不好！牠們要聯手了！這是最後一關，無論如何要撐住！」"},
+{k:"fight",f:()=>[wf(243),wf(244),wf(245)],m:"三聖獸",rw:()=>avgL()*600},
+{k:"say",t:"三聖獸對你低下了頭，化作光芒消失在雲間。|雲層深處傳來一聲清亮的鳴叫——|七彩的羽翼劃破天際，鳳王緩緩降臨在塔頂。|鳳王：「……持有羽毛的人類啊。我想看看，你和寶可夢之間的羈絆，是否真如這道彩虹般閃耀。」"},
+{k:"say",t:"鳳王抖動羽翼，七道光芒從牠的身後散開，化作一道道彩色的幻影，擋在你面前。|鳳王：「在與我交手之前，請先通過這些『彩虹的碎片』。牠們是我羽翼上落下的記憶。」|老人在一旁輕聲說：「這是最後的考驗了。」"},
+{k:"fight",f:()=>byT([1,9],4),m:"彩虹的幻影",rw:()=>avgL()*400},
+{k:"say",t:"幻影一個個消散，化作點點光粒，飄向鳳王的羽翼。|鳳王靜靜地看著你，眼神平靜如水。|鳳王：「……很好。那麼，接下來是真正的我。」|七彩的風，在塔頂狂暴地捲了起來。"},
+{k:"fight",f:()=>[...byT([1,9],2),wf(250)],m:"鳳王與牠的護衛",cap:.1,rw:()=>avgL()*1000},
+{k:"say",t:"鳳王倒在塔頂，七彩的光芒慢慢收斂。|你上前一步，卻發現鳳王並沒有受傷——牠只是靜靜地閉著眼，彷彿在聆聽什麼。|老人低聲說：「牠在聽你的夥伴們的心跳聲。」|每一隻寶可夢，都輕輕靠近了你，彷彿在回應。"},
+{k:"say",t:"鳳王睜開眼睛，眼神裡再沒有試探，只剩下溫柔。|鳳王：「百年來，我見過許多人。有人想要我的力量，有人想要我的羽毛，也有人，只是想見我一面。」|「你，是第一個，真正與夥伴並肩站在這裡的人。」|雲層裂開，一道彩虹橫跨天空，美得讓人說不出話。"},
+{k:"say",t:"鳳王展翅，七彩的光輝灑滿天空，一片羽毛輕輕落在你的手中。|鳳王：「我收下你的心意了。」|老人眼眶泛淚：「百年的等待，終於有了結果。」|鳳王之羽依然在你的包包裡發出柔和的光——它不會消失，將永遠陪伴著你。|獲得獎金 $200000！",fx:()=>{G.money+=200000;M="支線「霓光飛鴻」完成！鳳王已解除限定。"}}];
+const RCP=[["義大利麵","一把煮得太軟、還黏成一坨的義大利麵"],["混凝土","一塊紮紮實實、敲起來「咚咚」響的混凝土"],["高能蛋白","一罐印著「高能」兩個大字、來路不明的蛋白粉"],["東條英雞","一尊神情肅穆、羽毛挺立的公雞擺飾"],["沉澱物","一瓶從水溝底部撈上來的沉澱物"],["螺絲釘","一根鏽到發紅的大螺絲釘"],["挖掘機","一台迷你挖掘機模型（而且會自己動）"]];
+const S3=[
+{k:"say",t:"你走進寶可夢中心，卻發現櫃檯空無一人。|角落裡，負責治癒的沙奈朵虛弱地靠著牆，臉色蒼白，頭上的角閃著不穩定的光。|沙奈朵：「（微弱的念力傳音）……對不起……我病了……可是外面還有好多受傷的寶可夢在等……」"},
+{k:"say",t:"一位旅行訓練家焦急地探頭：「請問可以治療嗎？我的寶可夢快撐不住了！」|你看看沙奈朵，又看看門外排隊的人群。|沙奈朵：「……能不能……請你暫時……接手？」|你點了點頭：「交給我吧。」"},
+{k:"say",t:"你戴上護士帽接手櫃檯，沙奈朵在一旁用念力指導你。|沙奈朵：「首先……要穩定供應傷藥。倉庫……快空了。」|你翻了翻倉庫——果然只剩下幾個空瓶。"},
+{k:"buy",n:10,t:"沙奈朵：「去補貨吧……雖然這不是你的責任……」|你決定自掏腰包，買下 10 個傷藥補充倉庫。"},
+{k:"say",t:"傷藥補齊了。隊伍排得整整齊齊，你一個接一個地替寶可夢治療，順利得讓你自己都有點驚訝。|沙奈朵靠在椅子上，微笑著：「……你很有天份。」|就在這時，大門被猛地撞開！|搶匪寶可夢衝了進來：「把藥通通交出來！」"},
+{k:"fight",f:()=>byT([7,15],3),m:"搶匪寶可夢"},
+{k:"say",t:"搶匪寶可夢夾著尾巴逃走了，訓練家們紛紛向你道謝。|但你一看架子——剛才的混亂中，大半的傷藥都被打翻或搶走了。|沙奈朵：「又……不夠了呢……」"},
+{k:"buy",n:10,t:"你嘆了一口氣，又掏出錢包，再買 10 個傷藥補上缺口。|沙奈朵：「……真的，很抱歉讓你破費了。」"},
+{k:"say",t:"傷藥一瓶接一瓶地擺上了架子，櫃檯卻安靜得有些不對勁。|沙奈朵依然靠在椅背上，指尖輕輕搭著額頭，臉色比剛才還要蒼白一點點。|（心中OS：奇怪……傷藥補齊了，也沒有人受傷了，為什麼她的氣色一點都沒有變好？）|你：「沙奈朵，傷藥……對你沒有用嗎？」|沙奈朵：「（微弱的念力傳音）……有的……謝謝你的心意……但那是治傷口的藥。我的病……不在傷口上。」|你：「那你是哪裡不舒服？」|沙奈朵：「……是『根』。……治癒別人的時候，我用的不是力氣，而是體力的根。這幾年，我每天都在用……用到根都快空了。」|（心中OS：原來如此。她不是累了，是被掏空了。）"},
+{k:"say",t:"你：「那……到底要怎麼做，你才能好起來？」|沙奈朵沉默了很久，久到你以為她睡著了。|沙奈朵：「……有一個辦法。……我年輕的時候，聽我的前輩說過。」|（心中OS：前輩？原來她也有前輩啊……我一直以為她是一個人撐著這間中心。）|沙奈朵：「有一種藥，叫做『全滿體力丹』。吃下去，不管多累、多空……體力都會一瞬間被填滿。」|你：「這麼神奇？那要去哪裡才買得到？」|沙奈朵（苦笑）：「……買不到的。這個配方早就失傳了，連商店都沒有在賣。」|「而且我說的……是原版配方。連『根』都補得回來的那一種。」|你：「原版配方……要怎麼做？」|沙奈朵：「……我拿給你看。……不過，你看了……可能會想打我。」"},
+{k:"say",t:"沙奈朵翻出一本泛黃、邊角都捲起來的筆記本，用念力飄到你面前。|你低頭一看，第一頁只寫了七行字：|　・義大利麵|　・混凝土|　・高能蛋白|　・東條英雞|　・沉澱物|　・螺絲釘|　・挖掘機|（心中OS：……這是藥方？還是哪家壞掉的餐廳的採購單？）|你：「沙奈朵，這個……是不是抄錯了？」|沙奈朵：「……沒有抄錯。我也問過前輩一模一樣的問題。」|你：「那前輩怎麼回答？」|沙奈朵：「……他說：『藥方不是拿來懂的，是拿來信的。』」|（心中OS：這位前輩，到底是賢者還是騙子啊……）"},
+{k:"say",t:"你：「就算是真的……這七樣東西，我要去哪裡找？」|沙奈朵：「……野外的寶可夢，很愛撿東西。牠們會把撿到的、喜歡的、莫名其妙的東西，藏進巢穴裡當寶物。」|（心中OS：所以……是要我去跟牠們『借』？不對，是從牠們手上『贏』過來。）|沙奈朵：「……只要打贏牠們，牠們就會留下一樣寶物。……但會留下哪一樣，全看運氣。」|你：「也就是說，可能會一直拿到同一樣？」|沙奈朵：「……嗯。……很麻煩吧。對不起，要你做這種事……」|你握緊拳頭：「別道歉。你替那麼多寶可夢治療過，這一次，換我來。」|沙奈朵的眼眶微微泛紅，輕輕點了點頭。|她把筆記本推到你的手邊——清單，就記在上面了。|（心中OS：七樣東西各一份。……聽起來不難，只是，大概會是一段很長的路。）"},
+{k:"gather",t:"沙奈朵：「……就拜託你了。我會在中心……等你回來。」|你：「交給我。你好好休息，別再硬撐了。」|（心中OS：好，出發吧。先把這份古怪的清單，一樣一樣打勾。）",ev:[
+{n:3,t:"【途中・傍晚的傳音】|你剛打贏一場戰鬥，坐在路邊喘口氣，腦海裡忽然響起沙奈朵微弱的念力傳音。|沙奈朵：「……還好嗎？有沒有受傷……」|你：「放心，我好得很。倒是你，有沒有好好休息？」|沙奈朵：「……有。有一位旅行訓練家，主動來幫忙排隊……中心，運作得很好。」|（心中OS：看來，她不再是一個人了。這樣也好。）|沙奈朵：「……不要太勉強。材料，慢慢找就好。」|你：「知道啦，你也一樣。」"},
+{n:7,t:"【途中・奇怪的收藏家】|你正擦著汗，遠處一位老婆婆推著小推車慢悠悠地走過來，車上掛著牌子：『專收奇怪的東西』。|老婆婆：「年輕人，你在找什麼呀？」|你：「呃……義大利麵、混凝土、螺絲釘，還有一台挖掘機。」|老婆婆：「哦，是『那個』配方呀！我年輕的時候，也幫一位護士找過呢。」|（心中OS：該不會……她說的護士，就是沙奈朵的前輩？）|老婆婆：「記得，千萬不要想走捷徑。那些東西，缺一不可。連挖掘機都是。」|你：「為什麼連挖掘機都不能少……」|老婆婆笑而不答，推著車子慢悠悠地走遠了，車輪聲咯吱咯吱，消失在路的盡頭。"},
+{n:12,t:"【途中・深夜的決心】|露營的篝火劈啪作響。你低頭翻著筆記本，清單上已經被你畫了好幾個勾。|（心中OS：……我為什麼會這麼拚？明明只是路過寶可夢中心而已。）|你的夥伴們圍在火堆旁，一隻靠著一隻，靜靜地望著你。|（心中OS：啊，原來如此。因為牠們也被治癒過，被她接住過。）|你深吸一口氣，拍了拍自己的臉頰。|你：「好，明天繼續！」"}]},
+{k:"say",t:"你把七樣東西一樣一樣擺到桌上：義大利麵、混凝土、高能蛋白、東條英雞、沉澱物、螺絲釘，最後是一台會自己在桌上跑來跑去的迷你挖掘機。|沙奈朵看著滿桌的雜物，眼睛慢慢睜大。|沙奈朵：「……真的……全部……找齊了……」|（心中OS：她的聲音在發抖。原來，她一直都不覺得我真的做得到吧。）|你：「怎麼樣，是不是很了不起？」|沙奈朵（噗哧一聲笑了出來）：「……了不起。我第一次……看見有人為了這個配方，真的把挖掘機帶回來。」|你：「你前輩呢？他也帶過挖掘機嗎？」|沙奈朵：「……他說他找到的是『挖掘機的模型』，所以只做出了半顆。」|（心中OS：……原來模型是正確答案。早知道就不用跟那隻會動的挖掘機打一架了。）"},
+{k:"say",t:"沙奈朵把中心後方那口落了灰的大鍋搬了出來，用念力一件一件把材料丟進去。|義大利麵滑進鍋裡，混凝土「咚」地沉底，高能蛋白撒了一圈，東條英雞被輕輕放在最上面。沉澱物淋下去，螺絲釘叮叮噹噹地落進去，最後，迷你挖掘機自己跳了進去。|（心中OS：我現在看到的……真的是在煮藥嗎？）|鍋裡冒出一陣粉紅色的煙，味道出乎意料地……像剛烘好的麵包。|沙奈朵：「……合成，需要三個夜晚。這段期間，鍋子不能離人，也不能熄火。」|你：「那就由我來顧，你去休息。」|沙奈朵：「……不行。我也要在旁邊。這是……我的藥。」|你拉了一張椅子，在鍋邊坐下：「那我們一起。」"},
+{k:"say",t:"【合成進度 1／3　第一夜】|入夜後，寶可夢中心外下起了大雨。雨滴打在窗上，像無數隻小手在輕輕敲玻璃。|鍋裡的藥液咕嘟咕嘟地冒著泡，沙奈朵坐在鍋邊，用念力輕輕攪動，粉色的光映在她蒼白的臉上。|（心中OS：很安靜……安靜得讓人有點不安。）|就在這時，大門被猛地撞開！|一位渾身濕透的少年抱著一隻奄奄一息的寶可夢衝了進來：「求求你，救救牠！」|沙奈朵掙扎著站起來：「我……來幫你。你負責穩住牠……」|你們合力治療，沙奈朵的角發出柔和的粉色光芒，包覆了整個大廳。|少年的寶可夢睜開眼睛，發出微弱的叫聲。少年哭著道謝。|沙奈朵（疲憊卻欣慰）：「……原來，治癒別人的時候……我自己也被治癒了。」|但就在此時，窗外傳來一陣騷動——"},
+{k:"fight",f:()=>byT([13],3),m:"夜襲的寶可夢"},
+{k:"say",t:"夜襲的寶可夢被趕走了，雨也漸漸小了。|你回頭看向大鍋——幸好，火還在，藥液也沒有溢出來。|沙奈朵（輕聲）：「……謝謝你，守住了。」|（心中OS：她的聲音，好像比剛才稍微有力了一點。……是我的錯覺嗎？）|你：「你剛才又用了治癒的力量，不會更累嗎？」|沙奈朵：「……不會。奇怪……鍋子裡的味道，好像在幫我補回一點力氣。」|你看著鍋裡冒出的粉色蒸氣，忽然覺得，這鍋怪藥，或許真的有用。|窗外，雨停了，東方開始泛白。"},
+{k:"say",t:"【合成進度 2／3　第二夜】|第二個夜晚，月光透過窗戶灑進大廳。鍋裡的藥液變成了溫潤的淡金色。|你們坐在鍋邊，手裡各捧著一杯熱茶。|你：「沙奈朵，我一直想問……你為什麼會成為寶可夢中心的護士？」|沙奈朵：「……很久很久以前，我是一隻很怕痛的拉魯拉絲。」|（心中OS：拉魯拉絲……她以前，是那麼小的一隻啊。）|沙奈朵：「有一天，我的訓練家在旅途中受了重傷。我什麼都做不了，只能抱著他哭。……是一位護士，把他治好的。」|「那時候我就想，我也想變成……能夠對別人說『沒事了』的人。」|你：「所以你才會一直撐到現在。」|沙奈朵：「……是啊。我是不是很笨？把自己用到生病了，還不肯停下來。」|你：「不笨。但是，下次累了，一定要說出來。」|沙奈朵（點頭）：「……嗯。我學會了。」|你們互看了一眼，同時笑了出來。就在這時，鍋裡忽然「噗」地噴出一道煙——"},
+{k:"say",t:"鍋子劇烈地搖晃起來，一股強烈得不可思議的味道衝出了大廳——義大利麵的香氣、混凝土的粉塵味、沉澱物的……總之，是一種難以形容的味道。|沙奈朵：「……糟了……味道，傳出去了。」|（心中OS：不會吧？這種味道，真的有寶可夢會被吸引嗎？）|屋外傳來一陣雜亂的腳步聲，好幾雙眼睛在窗外閃閃發亮。|你：「看來是有的。」|你把沙奈朵護在身後：「你守著鍋，這裡交給我！」"},
+{k:"fight",f:()=>byT([8,12,16],3),m:"被異味吸引的寶可夢"},
+{k:"say",t:"最後一隻寶可夢也夾著尾巴逃走了。|你累得靠在牆上喘氣，沙奈朵還站在鍋邊，用念力死死穩住鍋蓋。|沙奈朵：「……鍋，沒事。你呢？」|你：「我也沒事……就是有點餓。話說回來，這個味道其實不難聞，有點像……」|沙奈朵：「……像烤麵包？」|你：「對對對！為什麼會是烤麵包啊……」|你們兩個對視了一秒，然後同時爆笑出聲。|（心中OS：好久沒有這樣笑了。……她應該也是吧。）|沙奈朵笑到咳了兩聲，卻是這幾天來，第一次在臉上泛起了淡淡的血色。"},
+{k:"say",t:"【合成進度 3／3　第三夜】|最後一夜，沒有雨，也沒有月亮，只有鍋子中央一圈一圈緩緩旋轉的光。|沙奈朵靠在你的肩旁，眼皮越來越沉。|沙奈朵：「……我好像……聽見前輩的聲音了。」|（心中OS：她的前輩……是不是已經不在了呢？）|沙奈朵：「前輩說過……這個配方，不是為了讓人變強，而是為了讓『一直在照顧別人的人』，也被照顧一次。」|你：「所以……這一鍋，是屬於你的。」|沙奈朵：「……是屬於『我們』的。」|你感覺到沙奈朵的念力輕輕地傳了過來，暖暖的，像一隻手，拍了拍你的肩膀。|鍋底的光，在這一刻，突然轉成了純白色。"},
+{k:"say",t:"「叮——」|鍋子深處傳來一聲清脆的響聲，像是烤箱的計時器終於跳到了零。|粉色、金色、白色的光芒同時衝出鍋口，在大廳裡畫出一道溫柔的光環。|鍋底靜靜地躺著一顆圓潤、柔軟、散發著淡淡麵包香味的藥丸。|（心中OS：……這就是，全滿體力丹？）|沙奈朵用顫抖的念力把藥丸托了起來，看了好久好久。|沙奈朵：「……謝謝你。如果沒有你，這一顆……只會永遠留在筆記本裡。」|你：「趕快吃吧，別讓它涼了。」|沙奈朵（含著淚笑了）：「……嗯。」|她把藥丸放進了口中。"},
+{k:"say",t:"粉紅色的光從沙奈朵的胸口緩緩擴散，包住了她的手、她的角、她的長髮。|她閉上眼睛，深深吸了一口氣，再慢慢吐了出來。|（心中OS：臉色……回來了。角上的光，也變穩了。）|沙奈朵睜開眼睛，原本黯淡的紅色眼眸，閃著柔和而堅定的光。|沙奈朵：「……我……沒有那種快要倒下去的感覺了。」|她輕輕轉了個圈，裙襬揚起一道漂亮的弧度。|沙奈朵：「雖然還不能說完全好了……但，已經差不多了。」|你：「差不多？」|沙奈朵（調皮地眨了眨眼）：「剩下的……要靠慢慢休息，還有，在跟你一起走的路上，一點一點補回來。」"},
+{k:"say",t:"天亮了，晨光灑進大廳。|沙奈朵輕盈地飄到你面前，深深地鞠了一躬。|沙奈朵：「謝謝你……這幾天，你不只替我頂住了寶可夢中心，也替我找回了站起來的力氣。」|「我想……跟你一起走，讓更多寶可夢得到治癒。」|（心中OS：我原本只是想幫個小忙而已。結果，卻好像交到了一位很重要的朋友。）|你：「歡迎加入，沙奈朵。」|沙奈朵（微笑）：「……請多指教，訓練家。」|「對了，我已經把配方抄了一份，寄去商店。以後，大家都買得到全滿體力丹了。」"},
+{k:"say",t:"沙奈朵成為了你的夥伴！",fx:()=>{const m=newMon(282,top3()),t=G.team.length<cap();if(t)G.team.push(m.u);const s=G.st.s3;delete s.g;delete s.n;delete s.ev;M=`支線「治癒之旅」完成！獲得沙奈朵 Lv${m.L}（${t?"加入隊伍":"送到寄放區"}），沙奈朵已解除限定。商店開始販售全滿體力丹！`}}];
+
+const S4=[
+{k:"say",t:"你把新抓到的利歐路帶到空地上。牠圓圓的眼睛閃閃發亮，對一切都很好奇。|你：「今天開始，我們來練習『波導彈』吧！」|利歐路用力把雙手往前一推——什麼都沒有發生。",fx:()=>{G.st.s4.u=Object.values(G.mons).filter(m=>m.id==447).sort((a,b)=>b.L-a.L)[0].u}},
+{k:"say",t:"你耐心地示範了一遍又一遍，利歐路拚命模仿，卻只是累得氣喘吁吁。|「再來一次！集中精神，感受周圍的氣息——」|還是沒有任何光球。利歐路垂下耳朵，沮喪地坐在地上。"},
+{k:"say",t:"你找來幾隻友善的野生寶可夢，請牠們幫忙當練習對手。|你：「先從基礎的開始——集中精神，把力量凝聚在掌心。」|利歐路閉上眼睛，雙掌緩緩合攏。一圈微弱的藍光閃了一下，立刻又消失了。|牠睜開眼睛，失望地看著自己的雙手。"},
+{k:"fight",f:()=>[wf(66)],m:"特訓沙包"},
+{k:"say",t:"第一輪特訓結束。利歐路喘著氣，卻還是不肯放棄，主動走回場中央。|你：「好樣的！再來一輪，這次換更強的對手。」"},
+{k:"fight",f:()=>[wf(66),wf(67)],m:"特訓沙包（進階）"},
+{k:"say",t:"你看著利歐路汗流浹背的模樣，從背包裡拿出一條毛巾替牠擦汗。|你：「累了吧？休息一下，吃點東西。」|利歐路搖搖頭，指了指自己的拳頭，示意還要再練。|你：「……好，最後一輪，全力以赴！」"},
+{k:"fight",f:()=>[wf(66),wf(67),wf(68)],m:"特訓沙包（最終）"},
+{k:"say",t:"訓練結束，利歐路的拳頭都紅了，卻依然放不出波導。牠把頭埋進膝蓋，不肯抬頭。|你：「別氣餒。我聽說有一位大師——小智，他的甲賀忍蛙能感應並運用波導。去找他吧。」|你牽起利歐路的手，朝著訓練家聚集的山丘出發。"},
+{k:"say",t:"山丘上，一位戴著帽子的少年正與甲賀忍蛙並肩站立，彷彿融為一體。|小智：「哦？你帶來了一隻利歐路。牠的波導很純粹，只是還沒找到出口。」|「想學波導，光看是沒用的——來，跟我的甲賀忍蛙對戰吧！」"},
+{k:"fight",f:()=>[wf(657),wf(658)],m:"小智的甲賀忍蛙"},
+{k:"say",t:"小智：「不錯嘛！第一回合，利歐路跟上了節奏。」|「但是，波導不是只有力量。你看——」|小智閉上眼睛，輕輕將手掌攤開，甲賀忍蛙周身浮現淡藍色的光暈，水手裏劍緩緩凝聚。|「波導，是感受萬物的連結。」"},
+{k:"say",t:"小智：「很好！剛才那一下，波導已經開始流動了。」|「再來一次。這次不要用眼睛，用心去感受。」"},
+{k:"fight",f:()=>[wf(658),wf(658)],m:"小智的甲賀忍蛙（第二戰）"},
+{k:"say",t:"利歐路的拳頭周圍，開始出現一圈圈淡淡的光。|小智：「再一場！我感覺得到，你們快要抓到了。」"},
+{k:"fight",f:()=>[wf(658),wf(658),wf(657)],m:"小智的甲賀忍蛙（第三戰）"},
+{k:"say",t:"戰鬥中，利歐路的拳頭周圍浮現出一圈淡淡的藍光，雖然還很不穩定。|小智：「就是這個！你快學會了——」|就在此時，一陣冰冷的黑霧從山丘下方湧了上來。"},
+{k:"say",t:"黑霧中走出一個披著暗影斗篷的人。|暗影幹部：「找到了……擁有純粹波導的利歐路。」|「小智，你已經沒用了。」他伸出手，黑色的鎖鏈纏上了小智和你的身體。|你和小智的眼神瞬間變得空洞——你們被控制了！|暗影幹部：「去，把那隻利歐路抓回來。」"},
+{k:"fight",f:()=>[wf(658,{sh:1}),wf(657,{sh:1}),wf(658,{sh:1})],m:"被操控的小智"},
+{k:"say",t:"小智的甲賀忍蛙一隻接著一隻倒下，可是小智的眼神依然空洞。|暗影幹部冷笑：「沒用的。他的意識，已經被我的黑霧鎖住了。」|黑霧像蛇一樣，從地面湧起，緩緩纏上你的雙腿。|你想大喊，卻發不出聲音。"},
+{k:"say",t:"黑霧纏住了你，你再也撐不住了——|利歐路在你倒下之前衝到你面前，用小小的身軀擋住了暗影的鎖鏈。|牠的身上爆出耀眼的藍光——那是波導的光芒！|進化的光芒中，利歐路長成了高大的路卡利歐！牠雙掌合攏，凝聚出一顆湛藍的光球——波導彈！|鎖鏈碎裂，你和小智都清醒了過來。|暗影幹部：「不可能……波導覺醒了？！」|小智：「這傢伙居然想搶別人的夥伴！路卡利歐，拜託了！」",fx:()=>{const m=G.mons[G.st.s4.u];if(m&&m.id==447)awake(m)}},
+{k:"fight",f:()=>byT([15,13],4,{sh:1}),m:"暗影部下"},
+{k:"say",t:"暗影部下全部倒下，暗影幹部臉色鐵青，緩緩舉起手：「……不得不認真了。」|黑霧在他身後凝聚成數個巨大的影子，每一個都散發著令人窒息的壓迫感。|小智：「小心！這些才是真正的暗影寶可夢！」|路卡利歐站到你的前面，雙掌合攏，藍光再度亮起。"},
+{k:"fight",f:()=>byT([15,13],5,{sh:1}),m:"暗影幹部"},
+{k:"say",t:"最後一擊，路卡利歐的波導彈撕裂了黑霧，暗影幹部踉蹌倒地。|暗影幹部：「可惡……下次一定……」黑霧散去，他消失無蹤。|小智笑著拍了拍路卡利歐的肩：「你們的羈絆，比任何波導都強大。」|路卡利歐低下頭，輕輕靠在你身邊。|獲得獎金 $50000，路卡利歐學會了更強的「真・波導彈」！"},
+{k:"say",t:"戰鬥結束了，山丘上重新恢復了平靜。|路卡利歐的雙手還在微微發光，牠低頭看著自己的掌心，像是第一次認識這份力量。|小智走近，蹲下來摸了摸牠的頭：「你剛才，真的很帥。」|路卡利歐不好意思地撇過頭，耳朵卻悄悄紅了。"},
+{k:"say",t:"夕陽把山丘染成金色。你和小智並肩坐在草地上，看著甲賀忍蛙和路卡利歐一起切磋。|小智：「波導這種東西，不是天生就有的。是在你願意為重要的人拚命的時候，才會真正醒來。」|你：「所以利歐路的覺醒，是因為……」|小智笑了：「因為牠想保護你。就這麼簡單。」",fx:()=>{G.money+=50000;M="支線「波的世界」完成！路卡利歐已解除限定。"}}];
+const ST={
+s1:{n:"武人的驕傲",ch:"武道熊師",ok:()=>maxL()>80&&hasId(891),cd:()=>"最高等級超過 Lv80，且擁有熊徒弟",S:S1},
+s2:{n:"霓光飛鴻",ch:"鳳王",ok:()=>G.items.fw>0,cd:()=>"擁有鳳王之羽（最高等級達130後，完成長期任務「霓光飛鴻・序章」）",S:S2},
+s3:{n:"治癒之旅",ch:"沙奈朵",ok:()=>!!(G.st&&G.st.s3&&G.st.s3.u)||((G.ls||0)>=3&&maxL()>40),cd:()=>`連續全敗三次，且最高等級超過 Lv40（目前連敗 ${G.ls||0} 次）`,S:S3},
+s4:{n:"波的世界",ch:"路卡利歐",ok:()=>hasId(447),cd:()=>"擁有利歐路",S:S4}};
+const stBadge=()=>{const n=Object.keys(ST).filter(id=>{const t=(G.st||{})[id]||{};return!t.d&&!t.i&&ST[id].ok()}).length;return n?`（${n}）`:""};
+function stories(){G.st=G.st||{};let h=`<h3>支線</h3>`+bt("返回","go('home')");let c=0;for(const id in ST){const s=ST[id],t=G.st[id]||{i:0,d:0};if(!(t.d||t.i>0||s.ok()))continue;c++;h+=`<div class=card><b>${s.n}</b>（${s.ch}）<br><small>限定角色：${s.ch}${t.d?"（已解鎖，可透過一般方式取得）":"（完成劇情前，只能在此劇情中獲得）"}<br>觸發條件：${s.cd()}</small><br>`+(t.d?"✔ 已完成":t.i>0||s.ok()?bt(t.i>0?"繼續劇情":"開始劇情",`stGoS('${id}')`):"（尚未滿足條件）")+`</div>`}return h+(c?"":`<div class=card>目前沒有可進行的支線。</div>`)}
+function stGoS(id){G.st=G.st||{};G.st[id]=G.st[id]||{i:0,d:0};G.sc=id;go("story")}
+function story(){const id=G.sc,s=ST[id],t=G.st[id];if(t.d)return`<div class=card>${s.n} 已完成。</div>`+bt("返回","go('stories')");const p=s.S[t.i],tx=typeof p.t=="function"?p.t():(p.t||""),box=`<div class=card><b>${s.n}</b>　<small>${t.i+1}/${s.S.length}</small><br>${tx.split("|").join("<br>")}</div>`,bk=bt("中斷劇情（進度已保存，回主頁）","go('home')");
+if(p.k=="say")return box+bt("繼續","stAdv()")+bk;
+if(p.k=="buy"){const c=p.n*px(80);return box+`<div class=card>需自掏腰包 $${c}（${p.n}個傷藥）　目前 $${G.money}</div>`+bt(`支付 $${c}`,"stBuy()",G.money<c)+bk}
+if(p.k=="gather"){const g=t.g||[0,0,0,0,0,0,0],all=g.every(x=>x>0),ev=(p.ev||[]).findIndex((e,j)=>(t.n||0)>=e.n&&!(t.ev||[]).includes(j));if(ev>=0)return`<div class=card><b>${s.n}</b>　<small>搜集材料</small><br>${p.ev[ev].t.split("|").join("<br>")}</div>`+bt("繼續",`stEv(${ev})`)+bk;return box+`<div class=card><b>📜 全滿體力丹・配方清單</b>（已擊敗 ${t.n||0} 隻）<br>`+RCP.map((r,j)=>`${g[j]>0?"✅":"⬜"} ${r[0]}　×${g[j]}<br><small>　${r[1]}</small>`).join("<br>")+`</div><div class=card><small>選一個地點搜尋。戰鬥規則和野生對戰相同（換人、倒下替換要花錢，也會獲得經驗），但不能捕捉、沒有金錢獎勵、不消耗體力。每場獲勝必定掉落清單上的其中一種材料，可能重複。七種各湊齊一份就能交給沙奈朵。</small></div>`+AR.slice(0,4).map((a,i)=>bt(a[0],`stGather(${i})`)).join("")+(all?`<br>`+bt("✅ 材料齊了！交給沙奈朵","stAdv()"):"")+`<br>`+bk}
+return box+(p.cap?`<div class=card>🎯 擊敗後可用5顆紀念球嘗試收服（每顆 ${Math.round(p.cap*100)}%）</div>`:"")+bt("開始戰鬥","stFight()")+bk}
+function stAdv(){const id=G.sc,s=ST[id],t=G.st[id],p=s.S[t.i];if(p.fx)p.fx();t.i++;if(t.i>=s.S.length)t.d=1;B=null;S="story";draw()}
+function stEv(j){const s=G.st[G.sc];s.ev=s.ev||[];s.ev.push(j);draw()}
+function stGather(i){const id=G.sc;STX={story:{id,cap:0},solo:0,fin:0,aw:0,wl:1};start("story",[wildFoe(i)],"")}
+function stQuit(){B=null;M="劇情進度已保存，可隨時到「支線」繼續。";go("home")}
+function stBuy(){const id=G.sc,p=ST[id].S[G.st[id].i],c=p.n*px(80);if(G.money<c)return;G.money-=c;stAdv()}
+function stFight(){const id=G.sc,p=ST[id].S[G.st[id].i],solo=p.solo?p.solo():0;if(solo){const m=G.mons[solo];m.hp=mh(m);m.pp={}}STX={story:{id,cap:p.cap||0},solo,fin:p.fin?1:0,aw:p.aw?1:0};start("story",p.f(),p.m||"對手")}
+function winS(){const k=B.story,p=ST[k.id].S[G.st[k.id].i];B.log.push("獲勝！");B.won=1;if(p.k=="gather"){const s=G.st[k.id],j=rnd(0,6);s.g=s.g||[0,0,0,0,0,0,0];s.g[j]++;s.n=(s.n||0)+1;B.log.push(`掉落物：${RCP[j][0]}！（${RCP[j][1]}）`+(s.g[j]>1?"　已經有了，重複的先收著。":""))}if(p.rw){const g=p.rw();G.money+=g;B.log.push(`獲得 $${g}`)}if(k.cap){B.cp=B.foes[B.foes.length-1];B.cp.hp=mh(B.cp);B.bl=5;B.cr=k.cap;B.log.push(`${nm(B.cp)}停下了腳步，似乎願意接受你的紀念球！`)}B.menu="end";draw()}
+function stAfter(){const k=B.story,id=k.id,p=ST[id].S[G.st[id].i];if(B.lost){healAll();B=null;S="story";return draw()}if(p.k=="gather"){B=null;S="story";return draw()}if(p.cap&&!B.got){healAll();B=null;M="對方展翅離去了……但事情還沒結束，也許還有機會。";S="story";return draw()}if(p.after)p.after();stAdv()}
+function boxList(T){let l=Object.values(G.mons);const q=(BX.q||"").trim();if(BX.t>=0)l=l.filter(m=>ty(m.id).includes(BX.t));if(q)l=l.filter(m=>N[m.id-1].includes(q)||String(m.id)==q);const c={new:(a,b)=>b.u-a.u,lv:(a,b)=>b.L-a.L||a.id-b.id,id:(a,b)=>a.id-b.id||b.L-a.L,sh:(a,b)=>(b.s|0)-(a.s|0)||b.L-a.L}[BX.s]||((a,b)=>b.u-a.u);l.sort((a,b)=>T(b.u)-T(a.u)||c(a,b));BX.n=BX.n||30;BX.tot=l.length;BX.more=Math.max(0,l.length-BX.n);return l.slice(0,BX.n)}
+function dupList(){const b={};for(const m of Object.values(G.mons)){const x=b[m.id];if(!x||m.L>x.L)b[m.id]=m}return Object.values(G.mons).filter(m=>b[m.id]!==m&&!m.s&&!m.sh&&!G.team.includes(m.u)&&!G.gym[m.u])}
+function dupSell(){const l=dupList(),p=l.reduce((s,m)=>s+m.L*20,0);l.forEach(m=>delete G.mons[m.u]);G.money+=p;BX.cf=0;M=`賣出 ${l.length} 隻重複寶可夢，獲得 $${p}`;draw()}
+function boxCtl(){const dl=dupList(),sm=dl.reduce((s,m)=>s+m.L*20,0),S2=[["new","最新"],["lv","等級"],["id","編號"],["sh","色違"]];return`<div class=card>符合 ${BX.tot} 隻　排序：`+S2.map(x=>bt(x[1],`BX.s='${x[0]}';BX.n=30;draw()`,BX.s==x[0])).join("")+`<br>屬性：<select onchange="BX.t=+this.value;BX.n=30;draw()"><option value=-1>全部</option>`+TY.map((t,i)=>`<option value=${i}${BX.t==i?" selected":""}>${t}</option>`).join("")+`</select> 搜尋：<input type=text value="${(BX.q||"").replace(/"/g,"&quot;")}" placeholder="名稱或編號" onchange="BX.q=this.value;BX.n=30;draw()"><br>`+bt(BX.cf?`確認賣出 ${dl.length} 隻（$${sm}）`:`賣出重複（保留每種最高等級，不含色違／暗影化／隊伍／放置）`,BX.cf?"dupSell()":"BX.cf=1;draw()",!dl.length)+(BX.cf?bt("取消","BX.cf=0;draw()"):"")+`</div>`}
+function toTeam(u){if(G.team.length<cap()&&!G.team.includes(u)){delete G.gym[u];G.team.push(u)}draw()}
+function toBox(u){if(G.team.length>1)G.team=G.team.filter(x=>x!=u);else M="隊伍至少要有一隻";draw()}
+function place(u){if(Object.keys(G.gym).length>=3)M="道館最多只能派駐3隻";else if(!G.team.includes(u))G.gym[u]=Date.now();draw()}
+function unplace(u){delete G.gym[u];draw()}
+function candy(u){const m=G.mons[u];if(G.items.c<1||m.L>=LM)return;G.items.c--;const L=[];addXp(m,need(m.L)-m.xp,L);M=L.join("<br>");draw()}
+function train(u){const m=G.mons[u];if(G.money<150)return;G.money-=150;cnt("train");const L=[`訓練完成 EXP+${40+m.L*4}`];addXp(m,40+m.L*4,L);M=L.join("<br>");draw()}
+function evolve(u){const m=G.mons[u];if(LOCK(m.id+1))return;const o=mh(m),a=nm(m);m.id++;G.dex[m.id]=2;m.hp+=mh(m)-o;M=`${a} 進化成 ${nm(m)}！`;draw()}
+// 商店
+const SH=[["b","寶貝球",200],["g","超級球",600],["u","高級球",1200],["p","傷藥（+30）",80],["q","好傷藥（+80）",250],["f","全能藥（全滿）",700],["c","神奇糖果（升1級）",1500],["r","活力藥（PP全回復）",400],["sd","深淵碎片（高級球的6倍價）",7200],["pc","移動式寶可夢中心（拋棄式，高級球的15倍價）",18000],["sp","體力藥水（體力 +10，價格＝高級球）",1200],["sf","全滿體力丹（體力全滿，價格＝5顆高級球）",6000],["gt","抽獎券（價格＝2顆高級球）",2400]];
+function shop(){const st=stTxt();return`<h3>商店</h3>金錢 $${G.money}　${st}<br><small>大師球必中，但商店不賣，只能從戰鬥中極低機率獲得。價格隨隊伍平均等級上漲（最高約2倍）；全部寶可夢最高等級超過50後，價格再 ×2.5，且神奇糖果掉落機率降為 20%</small><br>`+SH.filter(s=>s[0]!="sf"||sdn("s3")).map(s=>bt(`${s[1]} $${pk(s[0],s[2])}`,`buy('${s[0]}',${s[2]})`,G.money<pk(s[0],s[2])||((s[0]=="sp"||s[0]=="sf")&&G.sta>=G.stc))).join("")+`<br>`+bt(`擴充體力上限 ${G.stc}→${G.stc+10}（$${500*G.stc}）`,"stExp()",G.money<500*G.stc)+`<br>`+bt("返回","go('home')")}
+function stExp(){stm();const c=500*G.stc;if(G.money<c)return;G.money-=c;G.stc+=10;M=`體力上限擴充為 ${G.stc} 點！`;draw()}
+function buy(k,b){const p=pk(k,b);if(G.money<p)return;if(k=="sf"&&!sdn("s3"))return;if(k=="sp"||k=="sf"){stm();if(G.sta>=G.stc)return;G.money-=p;G.sta=k=="sf"?G.stc:Math.min(G.stc,G.sta+10);M=`體力恢復了！目前 ${G.sta}/${G.stc}`;return draw()}G.money-=p;(G.balls[k]!==undefined?G.balls:G.items)[k]++;draw()}
+// 抽卡
+const gc=()=>Math.round((300+60*topL())*1.44/10)*10;
+function gacha(){const c=gc(),k=G.items.gt||0;return`<h3>抽寶可夢</h3>金錢 $${G.money}　🎟抽獎券 ${k} 張<br><small>抽獎費用會隨你隊伍最高等級（Lv${topL()}）上漲。每抽還要消耗 1 張抽獎券（十連 10 張）。抽獎券來源：每完成一個每日任務 +1、三個全部完成再 +5；野外對戰、訓練家對戰勝利後約 10% 機率掉落。</small><br>`+bt(`單抽 $${c}＋1張`,"roll(1)",G.money<c||k<1)+bt(`十連 $${c*9}＋10張`,"roll(10)",G.money<c*9||k<10)+gSellBtn()+`<br>`+bt("返回","go('home')")}
+const gSellL=()=>GR.map(u=>G.mons[u]).filter(m=>m&&!m.s&&!LG.includes(m.id)&&!G.team.includes(m.u)&&!G.gym[m.u]);
+function gSellBtn(){if(!GR.length)return"";const l=gSellL(),p=l.reduce((a,m)=>a+m.L*20,0);return`<br>`+bt(l.length?`一鍵賣出本次抽到的 ${l.length} 隻（$${p}）`:"本次抽到的沒有可賣出的","gSell()",!l.length)+`<br><small>色違與神獸會自動保留，不會被賣掉。</small>`}
+function gSell(){const l=gSellL(),p=l.reduce((a,m)=>a+m.L*20,0);if(!l.length)return;l.forEach(m=>delete G.mons[m.u]);G.money+=p;const k=GR.length-l.length;GR=[];M=`賣出 ${l.length} 隻，獲得 $${p}`+(k?`（保留了 ${k} 隻色違／神獸）`:"");draw()}
+function roll(n){const c=n==10?gc()*9:gc();if(G.money<c||(G.items.gt||0)<n)return;G.money-=c;G.items.gt-=n;GR=[];const r=[];for(let i=0;i<n;i++){const id=pick(ALL,x=>LG.includes(x)?.3:wt(x)),sh=Math.random()<.01?1:0,m=newMon(id,LG.includes(id)||sh?Math.floor(G.team.reduce((a,u)=>a+G.mons[u].L,0)/G.team.length):5,sh);GR.push(m.u);r.push(`${N[id-1]}${m.s?"（色違）✨":""}${LG.includes(id)?" ★神獸★":""}${m.L>5?" Lv"+m.L:""}`)}cnt("roll",n);M="獲得："+r.join("、")+"（已放入寄放區）";draw()}
+// ---------- 戰鬥 ----------
+function start(k,f,meta){PH=new WeakMap();FXQ=new WeakMap();SQ.length=0;f.forEach(x=>{G.dex[x.id]=G.dex[x.id]||1});const X=STX;STX=null;const al=(X&&X.solo?[G.mons[X.solo]]:G.team.map(u=>G.mons[u])).filter(m=>m.hp>0);if(!al.length){M="隊伍全部瀕死，請先去健康中心治療";return go("home")}if(k=="wild"){stm();G.sta=Math.max(0,G.sta-1)}
+B={kind:k,foes:f,fi:0,act:al[0].u,menu:"m",log:[(k=="wild"||(X&&X.wl))?`野生的${N[f[0].id-1]}${f[0].s?"（色違）✨":""}出現了！`:`${meta}要對戰！派出了${N[f[0].id-1]}`]};if(X)Object.assign(B,X);go("battle")}
+function hit(a,d,mv){const s=hit1(a,d,mv);if(mv[5]&&d.hp>0&&RN()<mv[5])return s+" 連擊！"+hit1(a,d,mv);return s}
+function hit1(a,d,mv){const[n,t,p,q]=mv;if(B&&B.fin>=1&&B.fin<2){if(d.ko&&!a.ko){const x=Math.ceil(mh(d)*.05);d.hp=Math.max(0,d.hp-x);SQ.push("nve");return`${nm(a)}使用${n}！${nm(d)}絲毫不為所動…(-${x})`}if(a.ko&&B.fin==1){const x=Math.floor(mh(d)*.9);d.hp=Math.max(1,d.hp-x);B.fin=1.5;SQ.push("crit");return`${nm(a)}使用${n}！壓倒性的力量！(-${x})`}}if(mv[6]=="ko"&&d.ko){const x=d.hp;d.hp=0;SQ.push("crit");return`${nm(a)}使用${n}！一擊斃命！(-${x})`}if(q)return stat(a,d,mv);if(RN()*100>(p>=100?90:100)){SQ.push("miss");return`${nm(a)}的${n}沒有命中！`}
+const e=eff(t,ty(d.id)),cr=RN()<1/16?1.5:1;let x=Math.floor(((2*a.L/5+2)*p*sa(a,3)*sg(a.ak)/(sa(d,5)*sg(d.df))/50+2)*(ty(a.id).includes(t)?1.5:1)*(a.st=="brn"?.5:1)*e*cr*(a.dm||1)*(.85+RN()*.15));x=e?Math.max(1,x):0;d.hp=Math.max(0,d.hp-x);
+const ex=Object.assign({},GEN[t],MX[n]);let sx="";
+if(x>0){SQ.push(cr>1?"crit":e>1?"se":e<1?"nve":"hit");if(cr>1)fxs(d,{k:"crit"})}else SQ.push("nve");
+if(x>0&&d.hp>0){if(!d.st)for(const k in SK){if(ex[k]&&RN()<ex[k]&&!imm(d,SK[k])){d.st=SK[k];if(d.st=="frz")d.fc=0;sx+=`${nm(d)}${SX[d.st]}！`;SQ.push(d.st);fxs(d,{s:d.st});break}}
+if(ex.c&&!d.cf&&RN()<ex.c&&!imm(d,"cf")){d.cf=2+Math.floor(RN()*3);sx+=`${nm(d)}混亂了！`;SQ.push("cf");fxs(d,{s:"cf"})}
+if(ex.f&&RN()<ex.f)d.fl=1}
+if(d.st=="frz"&&t==1&&x>0){d.st=0;d.fc=0;sx+=`${nm(d)}的冰融化了！`}
+if(ex.d&&x>0){const y=Math.min(mh(a)-a.hp,Math.ceil(x*ex.d));if(y>0){a.hp+=y;sx+=`${nm(a)}吸取了體力！(+${y})`}}
+if(ex.r&&x>0){const y=Math.max(1,Math.floor(x*ex.r));a.hp=Math.max(0,a.hp-y);sx+=`${nm(a)}受到反作用力傷害！(-${y})`}
+if(ex.sd&&a.hp>0){a.df=Math.max(-6,(a.df||0)-1);sx+=`${nm(a)}的防禦下降了！`}
+if(ex.sc&&a.hp>0&&!a.cf){a.cf=2+Math.floor(RN()*3);sx+=`${nm(a)}因為力氣用盡而混亂了！`}
+if(ex.rc&&a.hp>0){a.rc=1;sx+=`${nm(a)}需要休息一回合！`}
+return`${nm(a)}使用${n}！`+(e==0?"完全沒有效果…":e>1?"效果絕佳！":e<1?"效果不太好…":"")+(cr>1?"擊中要害！":"")+`(-${x})`+sx}
+const fm=(f,d)=>{const a=mvs(f),k=a.filter(v=>v[3]),h=a.filter(v=>!v[3]),hp=f.hp/mh(f),hl=k.filter(v=>v[3].k=="h"||v[3].k=="th"),pk=l=>l[Math.random()*l.length|0];if(hp<.5&&hl.length&&(f.hc||0)<2&&Math.random()<.6)return pk(hl);const ok=k.filter(v=>{const q=v[3];if(q.k=="h"||q.k=="th")return false;if(q.k=="s")return!!d&&!d.st&&!imm(d,q.v);if(q.k=="c")return!!d&&!(d.cf>0)&&!imm(d,"cf");if(q.k=="b")return q.self?(f[q.s]||0)<2:!!d&&(d[q.s]||0)>-2;return true});const z=Math.random()<.3&&ok.length?ok:h.length?h:a;return pk(z)||STG};
+function turn(i){const me=G.mons[B.act],f=B.foes[B.fi],my=i<0?STG:mvs(me)[i],L=B.log;if(!my||(i>=0&&pl(me,my)<=0))return;
+const fv=fm(f,me),pm=pri(my),pf=pri(fv),mf=pm!=pf?pm>pf:spd(me)>=spd(f),A=mf?[me,f,my,1]:[f,me,fv,0],Z=mf?[f,me,fv,0]:[me,f,my,1];
+L.push(act(A[0],A[1],A[2],A[3]));if(ACT&&A[0].hp>0&&A[1].hp>0&&!A[2][3]&&bz(A[0],A[1]))L.push(`⚡速度優勢！${nm(A[0])}搶先再次出手！`,act(A[0],A[1],A[2],0));
+if(Z[0].hp>0&&A[0].hp>0)L.push(act(Z[0],Z[1],Z[2],Z[3]));tick(me,L);tick(f,L);after()}
+function foeTurn(){const f=B.foes[B.fi],me=G.mons[B.act];B.log.push(act(f,me,fm(f,me)));tick(me,B.log);tick(f,B.log);after()}
+function after(){const f=B.foes[B.fi],me=G.mons[B.act];if(B.fin==1.5&&me.hp>0&&f.hp>0){B.fin=2;B.menu="evolve";B.log.push("觀眾席爆出熱烈的聲援！熊徒弟的身體開始發光……");return draw()}if(B.aw==1&&me.id==447&&me.hp>0&&me.hp<=mh(me)*.3){awake(me);B.aw=2;B.log.push("利歐路在危急關頭覺醒了！進化成路卡利歐，學會了波導彈！")}
+if(f.hp<=0)return faint();
+if(me.hp<=0){SQ.push("faint");B.log.push(`${nm(me)}倒下了！`);B.menu="forced";if(B.solo||!G.team.some(u=>G.mons[u].hp>0))return lose(1)}
+draw()}
+function faint(){const f=B.foes[B.fi],x=Math.round(f.L*7*(isW()?1:1.6))+15;SQ.push("faint");B.log.push(`${nm(f)}倒下了！`);
+if(B.kind!="story"||B.wl)G.team.forEach(u=>{const m=G.mons[u];if(m.hp>0)addXp(m,u==B.act?x:Math.floor(x*.4),B.log)});
+if(B.fi+1<B.foes.length){B.fi++;B.log.push(`對手派出了${N[B.foes[B.fi].id-1]}`);const me=G.mons[B.act];if(me.hp<=0){B.log.push(`${nm(me)}倒下了！`);B.menu="forced";if(B.solo||!G.team.some(u=>G.mons[u].hp>0))return lose(1)}return draw()}win()}
+function win(){SQ.push("win");if(B.kind=="story")return winS();return win0()}
+function win0(){const k=B.kind,g=B.foes.reduce((a,f)=>a+f.L,0)*({wild:10,trainer:25,gym:60,shadow:30,abyss:40}[k]);G.money+=g;cnt({wild:"wild",trainer:"tr",gym:"gym",shadow:"sh",abyss:"ab"}[k]);G.ls=0;if(k=="abyss")G.abc=0;fqHook();B.log.push(`獲勝！獲得 $${g}`);
+if(Math.random()<{wild:.06,trainer:.15,gym:.5,shadow:.2,abyss:.6}[k]*(maxL()>50?.2:1)){G.items.c++;B.log.push("獲得神奇糖果！")}
+if((k=="wild"||k=="trainer")&&Math.random()<.1){G.items.gt=(G.items.gt||0)+1;B.log.push("獲得抽獎券 x1！")}
+if(Math.random()<{wild:.0005,trainer:.001,gym:.003,shadow:.001,abyss:.004}[k]){G.balls.m++;B.log.push("獲得大師球！！！")}
+if(Math.random()<{wild:.0005,trainer:.001,gym:.003,shadow:.001,abyss:.004}[k]){const sl=FM.filter(f=>f.k=="s"),f=sl[rnd(0,sl.length-1)];G.ms=G.ms||{};G.ms[f.st]=(G.ms[f.st]||0)+1;B.log.push(`獲得${f.st}！`)}
+if(k!="wild"&&k!="shadow"&&k!="abyss"&&Math.random()<(k=="gym"?.25:.1)){const f=B.foes[rnd(0,B.foes.length-1)],m=newMon(f.id,f.dl||f.L,f.s);B.log.push(`對手的${N[f.id-1]}加入了你！（${G.team.length<cap()?"進隊伍":"放寄放區"}）`);if(G.team.length<cap())G.team.push(m.u)}
+if(k=="wild"&&Math.random()<.1)B.sh=1;if(k=="shadow"){G.items.sd++;B.log.push("獲得深淵碎片 x1！")}if(k=="shadow"||k=="abyss"){B.cp=k=="abyss"?B.foes[5]:B.foes[rnd(0,B.foes.length-1)];B.cp.hp=mh(B.cp);B.bl=5;B.log.push(`${nm(B.cp)}成為了收服目標！紀念球 x5，每顆 20%`)}if(k=="gym"){G.items.gt=(G.items.gt||0)+2;B.log.push("獲得抽獎券 x2！");G.round++;B.log.push(`道館升級！下一輪平均 Lv${gl()}`);if(G.round%5==0&&G.round<=15)B.log.push(`隊伍上限提升到 ${cap()} 隻！`)}
+B.menu="end";draw()}
+function lose(w){SQ.push("lose");if(B.kind=="abyss"&&!B.abd){B.abd=1;G.abc=Math.max(0,(G.abc||1)-1);B.log.push(G.abc>0?"挑戰失敗…入場券還有 "+G.abc+" 次機會！":"挑戰失敗…這張入場券的機會用完了。")}if(B.kind=="story"){B.log.push("你輸了…（劇情對戰不扣錢，可以重新挑戰）");B.lost=1;B.menu="end";return draw()}if(w){G.ls=(G.ls||0)+1;if(G.ls>=3&&maxL()>40){G.st=G.st||{};G.st.s3=G.st.s3||{i:0,d:0};G.st.s3.u=1;B.log.push("總覺得有什麼事要發生了……到「支線」看看吧。")}G.money=Math.floor(G.money*.9);}B.log.push("你輸了…損失一成金錢，請到健康中心治療。");B.menu="end";draw()}
+function craft(){if(G.items.sd<6)return;G.items.sd-=6;G.items.tk++;M="合成了 1 張深淵入場券！";draw()}
+function shMon(dl,lg){const id=lg?pick(LG,()=>1):evo(pick(ALL.filter(y=>!LG.includes(y))),dl),x=mk(id,dl);x.dl=dl;x.L=Math.min(LM,dl+20);x.sh=1;x.hp=mh(x);return x}
+function shadowFight(){if(!G.team.some(u=>G.mons[u].hp>0)){M="隊伍全部瀕死，請先去健康中心治療";B=null;return go("home")}const b=avgL(),f=[];for(let i=0;i<G.team.length;i++)f.push(shMon(Math.max(2,Math.min(LM,b+rnd(-3,2))),0));start("shadow",f,"暗影對手")}
+function abyssFight(){if(!(G.abc>0)&&G.items.tk<1)return;if(!G.team.some(u=>G.mons[u].hp>0)){M="隊伍全部瀕死，請先去健康中心治療";return draw()}if(!(G.abc>0)){G.items.tk--;G.abc=2}const b=avgL(),f=[];for(let i=0;i<6;i++)f.push(shMon(Math.max(2,Math.min(LM,b+rnd(0,3))),i==5));start("abyss",f,"深淵君主")}
+function shBall(mast){if(!B.cp||B.cd||(!mast&&B.bl<1)||(mast&&G.balls.m<1))return;if(mast)G.balls.m--;else B.bl--;B.mc=0;const f=B.cp;if(mast||Math.random()<(B.cr||.2)){const m=newMon(f.id,B.story?top3():Math.min(LM,(f.dl||f.L)+5),f.s),t=G.team.length<cap();if(!B.story){m.sh=1;G.dsh=G.dsh||{};G.dsh[m.id]=1}if(t)G.team.push(m.u);cnt("cap");B.got=1;B.log.push(`收服成功！${N[f.id-1]}${B.story?"":"（暗影化）"}Lv${m.L}（${t?"加入隊伍":"送到寄放區"}）`);B.cd=1}else{B.log.push(`紀念球被掙脫了！剩下 ${B.bl} 顆`);if(B.bl<1){B.log.push("紀念球用完了，"+(B.story?"對方離去了…":"暗影寶可夢消散了…"));B.cd=1}}draw()}
+function sm(x){B.menu=x;draw()}
+const isW=()=>B.kind=="wild"||!!B.wl,sc=()=>(50+5*G.mons[B.act].L)*(isW()?3:1),rc=()=>3*Math.max(100,Math.round(avgL()/5)*100),px=b=>Math.round(b*(1+Math.min(100,avgL())/100)*(maxL()>50?2.5:1)/10)*10,pk=(k,b)=>k=="gt"?2*px(1200):k=="sp"?px(1200):k=="sf"?5*px(1200):k=="sd"?6*px(1200):k=="pc"?15*px(1200):px(b),maxL=()=>Math.max(...Object.values(G.mons).map(m=>m.L));
+function swp(u){const c=sc();if(G.money<c)return;G.money-=c;const o=G.mons[B.act];o.ak=o.df=o.sp=o.cf=0;B.act=u;B.log.push(`花費$${c}換上${N[G.mons[u].id-1]}！`);B.menu="m";foeTurn()}
+function forced(u){const c=isW()?rc():0;if(G.money<c)return;G.money-=c;B.act=u;B.log.push(c?`花費$${c}派出${N[G.mons[u].id-1]}`:`派出了${N[G.mons[u].id-1]}！`);B.menu="m";draw()}
+function run(){if(Math.random()<.8){B.log.push("成功逃走了！");B.menu="end";draw()}else{B.log.push("逃跑失敗！");foeTurn()}}
+function use(k){const me=G.mons[B.act];if(G.items[k]<1||me.hp<=0)return;G.items[k]--;cnt("use");if(k=="pc"){G.team.forEach(u=>{const x=G.mons[u];x.hp=mh(x)});B.log.push("移動式寶可夢中心啟動！隊伍全員體力完全恢復（含倒下的）！")}else if(k=="r"){me.pp={};B.log.push(`${nm(me)}的PP全部回復了`)}else{const bn=G.team.some(u=>G.mons[u].id==282)&&k!="f"?1.2:1;me.hp=Math.min(mh(me),me.hp+Math.round({p:30,q:80,f:9999}[k]*bn));B.log.push(`${nm(me)}回復了體力`+(bn>1?"（沙奈朵的治癒加成 +20%）":""))}B.menu="m";foeTurn()}
+function ball(k){if(G.balls[k]<1)return;G.balls[k]--;const f=B.foes[B.fi],id=f.id,cr=LG.includes(id)?.03:EV[id]?.55:EV[id-1]&&!EV[id]?.25:.4,p=k=="m"?1:Math.min(1,cr*{b:1,g:1.6,u:2.2}[k]*(1-f.hp/mh(f)*.7)*1.2);
+B.log.push("丟出了精靈球…");
+if(Math.random()<p){const m=newMon(id,f.dl||f.L,f.s);m.hp=Math.max(1,Math.round(f.hp/mh(f)*mh(m)));const t=G.team.length<cap();if(t)G.team.push(m.u);B.log.push(`捕捉成功！${N[id-1]}（${t?"加入隊伍":"送到寄放區"}）`);cnt("cap");G.ls=0;if(Math.random()<.1)B.sh=1;B.menu="end";draw()}else{B.log.push("寶可夢掙脫了！");B.menu="m";foeTurn()}}
+function battle(){const f=B.foes[B.fi],me=G.mons[B.act],k=B.kind,al=B.solo?[]:G.team.filter(u=>G.mons[u].hp>0&&u!=B.act);
+let h=`<div class=card style="text-align:center">${k=="wild"?"野生對戰":k=="story"?(B.wl?"劇情・搜集材料（類野生對戰）":"劇情對戰"):k=="shadow"?"暗影對手":k=="abyss"?"深淵君主":k=="gym"?"道館 第"+(G.round+1)+"輪":"訓練家對戰"}${B.foes.length>1?`（${B.fi+1}/${B.foes.length}）`:""}<button style="float:right;margin:0;padding:2px 8px;background:#2a3350" onclick="tsnd()">${SND?"🔊":"🔇"}</button></div>`+card(f)+card(me)+`<div class=log>${B.log.slice(-8).join("<br>")}</div>`,m=B.menu;
+if(m=="m")h+=(mvs(me).every(v=>pl(me,v)<=0)?bt("掙扎（PP耗盡）","turn(-1)"):mvs(me).map((v,i)=>bt(ml(v,me),`turn(${i})`,pl(me,v)<=0)).join(""))+`<br>`+bt("球","sm('ball')",k!="wild")+bt("道具","sm('item')")+bt("交換（需花錢）","sm('swap')",!al.length)+bt(isW()?"逃跑":"認輸",isW()?"run()":"lose()")+(B.story?bt("中斷劇情（回主頁）","stQuit()"):"");
+else if(m=="ball")h+=[["b","寶貝球"],["g","超級球"],["u","高級球"],["m","大師球(必中)"]].map(x=>bt(`${x[1]} x${G.balls[x[0]]}`,`ball('${x[0]}')`,!G.balls[x[0]])).join("")+bt("返回","sm('m')");
+else if(m=="item")h+=[["p","傷藥"],["q","好傷藥"],["f","全能藥"],["r","活力藥(PP)"],["pc","移動寶可夢中心"]].map(x=>bt(`${x[1]} x${G.items[x[0]]}`,`use('${x[0]}')`,!G.items[x[0]])).join("")+bt("返回","sm('m')");
+else if(m=="swap")h+=al.map(u=>bt(`${nm(G.mons[u])} Lv${G.mons[u].L}（$${sc()}）`,`swp(${u})`,G.money<sc())).join("")+bt("返回","sm('m')");
+else if(m=="evolve")h+=`<div class=card>觀眾席傳來聲援，熊徒弟開始進化！選擇進化的道路：</div>`+bt("一擊流（暗冥強襲拳，PP3，傷害極高）","evoPick(1)")+bt("連擊流（水流連打，PP3，每下30%連擊）","evoPick(2)");else if(m=="forced")h+=`<div class=card>${nm(me)}倒下了！${isW()?"派出下一隻需花費 $"+rc():"請派出下一隻（訓練家／道館對戰免費）"}</div>`+al.map(u=>bt(`${nm(G.mons[u])} Lv${G.mons[u].L}${isW()?"（$"+rc()+"）":""}`,`forced(${u})`,isW()&&G.money<rc())).join("")+bt("認輸","lose()")+(B.story?bt("中斷劇情（回主頁）","stQuit()"):"");
+else if(B.story&&(!B.cp||B.cd))h+=(B.lost?bt(B.wl?"回到搜集畫面":"重新挑戰","stAfter()"):bt(B.wl?"回到搜集畫面":"繼續劇情","stAfter()"))+bt("中斷劇情（進度已保存，回主頁）","stQuit()");else if(B.cp&&!B.cd)h+=B.mc?`<div class=card>確認使用大師球？（剩 ${G.balls.m} 顆）</div>`+bt("確認","B.mc=0;shBall(1)")+bt("取消","B.mc=0;draw()"):`<div class=card>🎯 收服階段：目標 ${nm(B.cp)}　紀念球 x${B.bl}，每顆 ${Math.round((B.cr||.2)*100)}%</div>`+bt(`丟紀念球（剩 ${B.bl}）`,"shBall()",B.bl<1)+bt(`使用大師球（x${G.balls.m}）`,"B.mc=1;draw()",!G.balls.m)+bt("放棄收服","B.cd=1;draw()");else h+=(B.sh?`<div class=card>🌑 暗影的氣息籠罩著四周……暗影對手出現了！<br><small>對手數量與你的隊伍相同（${G.team.length}隻），實際等級比顯示等級高20，收服後為顯示等級+5。</small></div>`+bt("迎戰暗影對手","shadowFight()"):"")+bt("回主畫面","B=null;go('home')");
+return h}
+draw();
+</script></body></html>
